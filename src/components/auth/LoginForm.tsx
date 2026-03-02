@@ -9,13 +9,7 @@ import { FormInput } from '@/components/auth/FormInput';
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
 import { LoginError, loginUser, type UserRole } from '@/lib/auth';
 
-type FieldErrors = Partial<Record<'role' | 'email' | 'password', string>>;
-
-const roleOptions: { label: string; value: UserRole }[] = [
-  { label: 'Admin', value: 'Admin' },
-  { label: 'Instructor', value: 'Instructor' },
-  { label: 'Student', value: 'Student' },
-];
+type FieldErrors = Partial<Record<'email' | 'password', string>>;
 
 const MailIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -34,7 +28,6 @@ const LockIcon = () => (
 
 export function LoginForm() {
   const router = useRouter();
-  const [role, setRole] = useState<UserRole>('Student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -70,13 +63,13 @@ export function LoginForm() {
     setIsLoading(true);
 
     try {
-      await loginUser({ email, password, role });
+      const { role } = await loginUser({ email, password });
       const redirectMap: Record<UserRole, string> = {
         Student: '/dashboard/student',
         Instructor: '/dashboard/teacher',
         Admin: '/dashboard/admin',
       };
-      router.push(redirectMap[role]);
+      router.push(role ? redirectMap[role] ?? '/dashboard' : '/dashboard');
     } catch (error) {
       if (error instanceof LoginError) {
         setFormError(error.message);
@@ -91,29 +84,6 @@ export function LoginForm() {
   return (
     <form className="space-y-6" onSubmit={handleSubmit} noValidate>
       {formError ? <ErrorAlert message={formError} /> : null}
-
-      <div>
-        <p className="text-sm font-medium text-slate-600">Select your role</p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          {roleOptions.map((option) => {
-            const isActive = option.value === role;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setRole(option.value)}
-                className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 ${
-                  isActive ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm' : 'border-slate-200 text-slate-500 hover:border-blue-200 hover:text-blue-700'
-                }`}
-                aria-pressed={isActive}
-              >
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-        {fieldErrors.role ? <p className="mt-1 text-sm text-red-600">{fieldErrors.role}</p> : null}
-      </div>
 
       <FormInput
         id="login-email"
