@@ -206,10 +206,10 @@ export default function Home() {
                 Register as Student
               </Link>
               <Link
-                href="/register/instructor"
+                href="/register/teacher"
                 className="rounded-2xl border border-blue-200 px-4 py-3 text-sm font-semibold text-blue-900 transition hover:border-blue-400 hover:bg-blue-50"
               >
-                Register as Instructor
+                Register as Teacher
               </Link>
             </div>
           </div>
