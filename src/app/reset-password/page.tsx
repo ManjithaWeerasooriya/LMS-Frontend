@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
-import { clearStoredAuth } from '@/lib/auth';
 import { resetPassword, UserApiError } from '@/lib/user';
 
 export default function ResetPasswordPage() {
@@ -51,7 +50,6 @@ export default function ResetPasswordPage() {
         newPassword,
         confirmPassword,
       });
-      clearStoredAuth();
       setIsSuccess(true);
       setTimeout(() => {
         router.replace('/login');
