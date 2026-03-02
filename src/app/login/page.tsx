@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { ErrorAlert } from '@/components/ErrorAlert';
 import { LoginError, loginUser, type UserRole } from '@/lib/auth';
 
-type FieldErrors = Partial<Record<'role' | 'email' | 'password', string>>;
+type FieldErrors = Partial<Record<'email' | 'password', string>>;
 
 type IconInputProps = {
   name: string;
@@ -19,12 +19,6 @@ type IconInputProps = {
   icon: React.ReactNode;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 };
-
-const roleOptions: { label: string; value: UserRole }[] = [
-  { label: 'Admin', value: 'Admin' },
-  { label: 'Instructor', value: 'Instructor' },
-  { label: 'Student', value: 'Student' },
-];
 
 function IconInput({ name, type, placeholder, value, disabled, error, icon, onChange }: IconInputProps) {
   const inputId = `${name}-input`;
@@ -79,7 +73,6 @@ const LockIcon = () => (
 
 export default function Home() {
   const router = useRouter();
-  const [role, setRole] = useState<UserRole>('Student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -89,10 +82,6 @@ export default function Home() {
 
   const validateFields = () => {
     const errors: FieldErrors = {};
-
-    if (!role) {
-      errors.role = 'Role is required.';
-    }
 
     if (!email) {
       errors.email = 'Email is required.';
@@ -119,13 +108,13 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      await loginUser({ email, password, role });
-      const redirectMap: Record<UserRole, string> = {
+      const { role } = await loginUser({ email, password });
+      const roleRedirects: Record<UserRole, string> = {
         Student: '/dashboard/student',
         Instructor: '/dashboard/teacher',
         Admin: '/dashboard/admin',
       };
-      router.push(redirectMap[role]);
+      router.push(role ? roleRedirects[role] ?? '/dashboard' : '/dashboard');
     } catch (error) {
       if (error instanceof LoginError) {
         setFormError(error.message);
@@ -158,30 +147,6 @@ export default function Home() {
 
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             {formError ? <ErrorAlert message={formError} /> : null}
-
-            <div>
-              <p className="text-sm font-medium text-slate-600">Select your role</p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                {roleOptions.map((option) => {
-                  const isActive = role === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setRole(option.value)}
-                      className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 ${
-                        isActive
-                          ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm'
-                          : 'border-slate-200 text-slate-500 hover:border-blue-200 hover:text-blue-700'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
-              </div>
-              {fieldErrors.role ? <p className="mt-1 text-sm text-red-600">{fieldErrors.role}</p> : null}
-            </div>
 
             <IconInput
               name="email"
@@ -241,10 +206,10 @@ export default function Home() {
                 Register as Student
               </Link>
               <Link
-                href="/register/instructor"
+                href="/register/teacher"
                 className="rounded-2xl border border-blue-200 px-4 py-3 text-sm font-semibold text-blue-900 transition hover:border-blue-400 hover:bg-blue-50"
               >
-                Register as Instructor
+                Register as Teacher
               </Link>
             </div>
           </div>
