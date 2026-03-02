@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import { decodeJwt, getStoredAuthToken, logoutUser, type DecodedJwt } from '@/lib/auth';
 
@@ -52,6 +52,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [adminName, setAdminName] = useState('Admin User');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -130,6 +133,23 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     [pathname],
   );
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (menuRef.current && !menuRef.current.contains(target) && menuButtonRef.current && !menuButtonRef.current.contains(target)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      window.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      window.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
   if (isChecking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-100">
@@ -184,18 +204,46 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-rose-500" />
               🔔
             </button>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700">
-                {adminName
-                  .split(' ')
-                  .map((part) => part[0])
-                  .join('')
-                  .slice(0, 2)}
-              </div>
-              <div className="text-sm">
-                <p className="font-semibold text-slate-900">{adminName}</p>
-                <p className="text-xs uppercase tracking-wide text-blue-700">Admin</p>
-              </div>
+            <div className="relative">
+              <button
+                ref={menuButtonRef}
+                type="button"
+                onClick={() => setIsMenuOpen((prev) => !prev)}
+                className="flex items-center gap-3 rounded-2xl border border-slate-200 px-3 py-2 transition hover:border-blue-400 hover:bg-blue-50"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+                  {adminName
+                    .split(' ')
+                    .map((part) => part[0])
+                    .join('')
+                    .slice(0, 2)}
+                </div>
+                <div className="text-left text-sm">
+                  <p className="font-semibold text-slate-900">{adminName}</p>
+                  <p className="text-xs uppercase tracking-wide text-blue-700">Admin</p>
+                </div>
+              </button>
+              {isMenuOpen ? (
+                <div
+                  ref={menuRef}
+                  className="absolute right-0 z-20 mt-2 w-48 rounded-2xl border border-slate-200 bg-white p-2 text-sm shadow-xl"
+                >
+                  <Link
+                    href="/dashboard/profile"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block rounded-xl px-3 py-2 font-medium text-slate-700 transition hover:bg-slate-100"
+                  >
+                    My Profile
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="mt-1 block w-full rounded-xl px-3 py-2 text-left font-medium text-rose-600 transition hover:bg-rose-50"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : null}
             </div>
           </div>
         </header>
