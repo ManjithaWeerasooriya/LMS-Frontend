@@ -19,6 +19,18 @@ export type RegisterResponse = {
   role?: string;
 };
 
+export type DecodedJwt = {
+  exp?: number;
+  role?: string;
+  sub?: string;
+  name?: string;
+  nameid?: string;
+  nameidentifier?: string;
+  userId?: string;
+  email?: string;
+  [key: string]: unknown;
+};
+
 export interface LoginParams {
   email: string;
   password: string;
@@ -150,6 +162,98 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
     }
 
     throw new LoginError('Something went wrong. Please check your connection and try again.');
+  }
+}
+
+const AUTH_STORAGE_KEYS = ['authToken', 'refreshToken', 'authTokenType', 'authTokenExpiresAt', 'userRole'] as const;
+
+export function getStoredAuthToken(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  return window.localStorage.getItem('authToken');
+}
+
+export function getStoredRefreshToken(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  return window.localStorage.getItem('refreshToken');
+}
+
+export function clearStoredAuth(): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  AUTH_STORAGE_KEYS.forEach((key) => {
+    window.localStorage.removeItem(key);
+  });
+}
+
+function decodeBase64Url(input: string): string {
+  const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
+  const padding = (4 - (normalized.length % 4 || 4)) % 4;
+  const padded = normalized.padEnd(normalized.length + padding, '=');
+
+  if (typeof window !== 'undefined' && typeof window.atob === 'function') {
+    return window.atob(padded);
+  }
+
+  if (typeof atob === 'function') {
+    return atob(padded);
+  }
+
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(padded, 'base64').toString('binary');
+  }
+
+  throw new Error('No base64 decoder available');
+}
+
+export function decodeJwt(token: string | null | undefined): DecodedJwt | null {
+  if (!token) {
+    return null;
+  }
+  try {
+    const [, payload] = token.split('.');
+    if (!payload) {
+      return null;
+    }
+    const decoded = decodeBase64Url(payload);
+    return JSON.parse(decoded) as DecodedJwt;
+  } catch {
+    return null;
+  }
+}
+
+export async function logoutUser(): Promise<void> {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const refreshToken = getStoredRefreshToken();
+  const token = getStoredAuthToken();
+  const deviceId = getDeviceId();
+
+  try {
+    if (refreshToken && deviceId) {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      await fetch(`${apiConfig.BASE_URL}/api/v1/auth/logout`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ refreshToken, deviceId }),
+      });
+    }
+  } catch (error) {
+    console.warn('[logoutUser] Failed to log out cleanly.', error);
+  } finally {
+    clearStoredAuth();
   }
 }
 
