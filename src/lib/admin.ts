@@ -1,6 +1,4 @@
-import { apiConfig } from '@/lib/config';
-
-const { BASE_URL } = apiConfig;
+import { apiClient, isAxiosAuthError } from '@/lib/http';
 
 export type AdminUserRole = 'Student' | 'Teacher' | 'Admin';
 export type AdminUserStatus = 'Active' | 'Pending' | 'Suspended';
@@ -41,52 +39,6 @@ export class AdminApiError extends Error {
 
 const ADMIN_BASE = '/api/v1/admin';
 
-function getAuthToken(): string {
-  if (typeof window === 'undefined') {
-    throw new AdminApiError('Authentication is required.', 401);
-  }
-
-  const token = window.localStorage.getItem('authToken');
-  if (!token) {
-    throw new AdminApiError('Authentication is required.', 401);
-  }
-  return token;
-}
-
-async function parseError(response: Response): Promise<string> {
-  try {
-    const data = (await response.json()) as { message?: string };
-    if (data?.message) {
-      return data.message;
-    }
-  } catch {
-    /* noop */
-  }
-  if (response.status === 404) {
-    return 'User not found.';
-  }
-  return 'Something went wrong. Please try again.';
-}
-
-async function request(path: string, init?: RequestInit): Promise<Response> {
-  const token = getAuthToken();
-  const headers = new Headers(init?.headers);
-  headers.set('Authorization', `Bearer ${token}`);
-  headers.set('Content-Type', 'application/json');
-
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...init,
-    headers,
-  });
-
-  if (!response.ok) {
-    const message = await parseError(response);
-    throw new AdminApiError(message, response.status);
-  }
-
-  return response;
-}
-
 export async function getAdminUsers(query: AdminUserQuery): Promise<AdminUserListResponse> {
   const params = new URLSearchParams();
   if (query.pageNumber) {
@@ -102,36 +54,53 @@ export async function getAdminUsers(query: AdminUserQuery): Promise<AdminUserLis
     params.set('status', query.status);
   }
   const search = params.toString();
-  const response = await request(`${ADMIN_BASE}/users${search ? `?${search}` : ''}`, {
-    method: 'GET',
-  });
-  return (await response.json()) as AdminUserListResponse;
+  try {
+    const { data } = await apiClient.get<AdminUserListResponse>(`${ADMIN_BASE}/users${search ? `?${search}` : ''}`);
+    return data;
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
 }
 
 export async function suspendUser(userId: string, reason = ''): Promise<void> {
-  await request(`${ADMIN_BASE}/users/${userId}/suspend`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      userId,
-      reason,
-    }),
-  });
+  try {
+    await apiClient.patch(`${ADMIN_BASE}/users/${userId}/suspend`, { userId, reason });
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
 }
 
 export async function reactivateUser(userId: string): Promise<void> {
-  await request(`${ADMIN_BASE}/users/${userId}/reactivate`, {
-    method: 'PATCH',
-  });
+  try {
+    await apiClient.patch(`${ADMIN_BASE}/users/${userId}/reactivate`);
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
 }
 
 export async function approveTeacher(userId: string): Promise<void> {
-  await request(`${ADMIN_BASE}/users/${userId}/approve`, {
-    method: 'PATCH',
-  });
+  try {
+    await apiClient.patch(`${ADMIN_BASE}/users/${userId}/approve`);
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
 }
 
 export async function rejectTeacher(userId: string): Promise<void> {
-  await request(`${ADMIN_BASE}/users/${userId}/reject`, {
-    method: 'PATCH',
-  });
+  try {
+    await apiClient.patch(`${ADMIN_BASE}/users/${userId}/reject`);
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
+}
+
+function convertAxiosError(error: unknown): never {
+  if (isAxiosAuthError(error) && error.response) {
+    const message = (error.response.data as { message?: string } | undefined)?.message ?? 'Unable to complete request.';
+    throw new AdminApiError(message, error.response.status);
+  }
+  if (error instanceof Error) {
+    throw new AdminApiError(error.message, 0);
+  }
+  throw new AdminApiError('Unable to complete request.', 0);
 }

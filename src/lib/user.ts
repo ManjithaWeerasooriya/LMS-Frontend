@@ -1,5 +1,5 @@
 import { apiConfig } from '@/lib/config';
-import { getStoredAuthToken } from '@/lib/auth';
+import { apiClient, isAxiosAuthError } from '@/lib/http';
 
 export type UserProfile = {
   id: string;
@@ -28,10 +28,19 @@ const { BASE_URL } = apiConfig;
 
 async function parseError(response: Response): Promise<{ message: string; details?: string[] }> {
   try {
-    const data = (await response.json()) as { message?: string; errors?: unknown };
-    const details: string[] = [];
-    if (Array.isArray(data?.errors)) {
-      data.errors.forEach((entry) => {
+    const data = await response.json();
+    return extractErrors(data);
+  } catch {
+    return { message: 'Something went wrong. Please try again.' };
+  }
+}
+
+function extractErrors(payload: unknown): { message: string; details?: string[] } {
+  const details: string[] = [];
+  if (payload && typeof payload === 'object' && 'errors' in payload) {
+    const err = (payload as { errors?: unknown }).errors;
+    if (Array.isArray(err)) {
+      err.forEach((entry) => {
         if (typeof entry === 'string') {
           details.push(entry);
         } else if (entry && typeof entry === 'object') {
@@ -41,8 +50,8 @@ async function parseError(response: Response): Promise<{ message: string; detail
           if (message) details.push(message);
         }
       });
-    } else if (data?.errors && typeof data.errors === 'object') {
-      Object.values(data.errors as Record<string, unknown>).forEach((value) => {
+    } else if (err && typeof err === 'object') {
+      Object.values(err as Record<string, unknown>).forEach((value) => {
         if (Array.isArray(value)) {
           value.forEach((item) => {
             if (typeof item === 'string') details.push(item);
@@ -52,51 +61,41 @@ async function parseError(response: Response): Promise<{ message: string; detail
         }
       });
     }
-    return {
-      message: data?.message || 'Something went wrong. Please try again.',
-      details: details.length ? details : undefined,
-    };
-  } catch {
-    return { message: 'Something went wrong. Please try again.' };
-  }
-}
-
-async function authorizedRequest(path: string, init?: RequestInit): Promise<Response> {
-  const token = getStoredAuthToken();
-  if (!token) {
-    throw new UserApiError('Authentication required.', 401);
+  } else if (Array.isArray(payload)) {
+    payload.forEach((entry) => {
+      if (typeof entry === 'string') {
+        details.push(entry);
+      }
+    });
   }
 
-  const headers = new Headers(init?.headers);
-  headers.set('Authorization', `Bearer ${token}`);
-  if (init?.body && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
-  }
+  const message =
+    (payload && typeof payload === 'object' && 'message' in payload && typeof (payload as { message?: string }).message === 'string'
+      ? (payload as { message?: string }).message
+      : undefined) || 'Something went wrong. Please try again.';
 
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...init,
-    headers,
-  });
-
-  if (!response.ok) {
-    const { message, details } = await parseError(response);
-    throw new UserApiError(message, response.status, details);
-  }
-
-  return response;
+  return {
+    message,
+    details: details.length ? details : undefined,
+  };
 }
 
 export async function getMyProfile(): Promise<UserProfile> {
-  const response = await authorizedRequest('/api/v1/users/me', { method: 'GET' });
-  return (await response.json()) as UserProfile;
+  try {
+    const { data } = await apiClient.get<UserProfile>('/api/v1/users/me');
+    return data;
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
 }
 
 export async function updateMyProfile(payload: { firstName?: string; lastName?: string; phone?: string }): Promise<UserProfile> {
-  const response = await authorizedRequest('/api/v1/users/me', {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  });
-  return (await response.json()) as UserProfile;
+  try {
+    const { data } = await apiClient.put<UserProfile>('/api/v1/users/me', payload);
+    return data;
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
@@ -122,4 +121,15 @@ export async function resetPassword(payload: { userId: string; token: string; ne
     const { message, details } = await parseError(response);
     throw new UserApiError(message, response.status, details);
   }
+}
+
+function convertAxiosError(error: unknown): never {
+  if (isAxiosAuthError(error) && error.response) {
+    const { message, details } = extractErrors(error.response.data);
+    throw new UserApiError(message, error.response.status, details);
+  }
+  if (error instanceof Error) {
+    throw new UserApiError(error.message, 0);
+  }
+  throw new UserApiError('Unable to complete request.', 0);
 }
