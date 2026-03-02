@@ -98,6 +98,24 @@ export async function updateMyProfile(payload: { firstName?: string; lastName?: 
   }
 }
 
+export async function requestAccountDeletion(): Promise<{ message?: string }> {
+  try {
+    const { data } = await apiClient.post<{ message?: string }>('/api/v1/users/me/delete-request');
+    return data;
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
+}
+
+export async function confirmAccountDeletion(params: { userId: string; token: string }): Promise<{ message?: string }> {
+  try {
+    const { data } = await apiClient.get<{ message?: string }>('/api/v1/users/confirm-delete', { params });
+    return data;
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
+}
+
 export async function requestPasswordReset(email: string): Promise<void> {
   await fetch(`${BASE_URL}/api/v1/auth/forgot-password`, {
     method: 'POST',
