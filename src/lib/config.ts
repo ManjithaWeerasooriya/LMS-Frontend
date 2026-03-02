@@ -1,4 +1,4 @@
-const BASE_URL = '' as const;
+const BASE_URL = 'http://localhost:5251' as const;
 
 const endpoints = {
   auth: {
