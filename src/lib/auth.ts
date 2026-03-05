@@ -1,5 +1,7 @@
 import { apiConfig } from '@/lib/config';
 import { getDeviceId } from '@/lib/device';
+import { api } from '@/lib/api';
+import { isAxiosError } from 'axios';
 
 export type UserRole = 'Student' | 'Instructor' | 'Admin';
 export type RegistrationRole = 'Student' | 'Teacher';
@@ -87,7 +89,7 @@ export class RegisterError extends Error {
 }
 
 export async function loginUser({ email, password }: LoginParams): Promise<LoginResult> {
-  const { BASE_URL, endpoints } = apiConfig;
+  const { endpoints } = apiConfig;
 
   const rawDeviceId = getDeviceId();
   const normalizedDeviceId = typeof rawDeviceId === 'string' ? rawDeviceId.trim() : '';
@@ -99,26 +101,9 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
   const requestBody = { email, password, deviceId };
 
   try {
-    const response = await fetch(`${BASE_URL}${endpoints.auth.login}`, {
-      method: 'POST',
+    const { data } = await api.post<ApiLoginResponse>(endpoints.auth.login, requestBody, {
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
     });
-
-    if (response.status === 401) throw new LoginError('Invalid credentials', 401);
-    if (response.status === 403) throw new LoginError('Account pending approval or suspended', 403);
-    if (response.status >= 500)
-      throw new LoginError('Unable to sign in. Please try again later.', response.status);
-
-    if (!response.ok) {
-      const errorPayload = (await response.json().catch(() => null)) as { message?: string } | null;
-      throw new LoginError(
-        errorPayload?.message || 'Unable to sign in. Please try again later.',
-        response.status
-      );
-    }
-
-    const data = (await response.json()) as ApiLoginResponse;
 
     if (!data?.accessToken || !data.refreshToken)
       throw new LoginError('Unexpected response from server.');
@@ -156,6 +141,25 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
       role: normalizedRole,
     };
   } catch (error) {
+    if (isAxiosError(error)) {
+      const status = error.response?.status;
+      const errorPayload =
+        error.response?.data && typeof error.response.data === 'object'
+          ? (error.response.data as { message?: string })
+          : null;
+
+      if (status === 401) throw new LoginError('Invalid credentials', 401);
+      if (status === 403) throw new LoginError('Account pending approval or suspended', 403);
+      if (typeof status === 'number' && status >= 500)
+        throw new LoginError('Unable to sign in. Please try again later.', status);
+      if (typeof status === 'number') {
+        throw new LoginError(
+          errorPayload?.message || 'Unable to sign in. Please try again later.',
+          status
+        );
+      }
+    }
+
     if (error instanceof LoginError) throw error;
     throw new LoginError('Something went wrong. Please check your connection and try again.');
   }
