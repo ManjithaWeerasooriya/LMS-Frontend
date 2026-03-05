@@ -178,7 +178,7 @@ export default function TeacherRegistrationPage() {
               value={values.email}
               onChange={updateValue('email')}
               disabled={isSubmitting}
-              className={`${inputClasses(fieldErrors.email)} h-12`}
+              className={`${inputClasses(!!fieldErrors.email)} h-12`}
             />
             {fieldErrors.email ? <p className="text-xs text-rose-600">{fieldErrors.email}</p> : null}
           </div>
@@ -192,7 +192,7 @@ export default function TeacherRegistrationPage() {
               value={values.password}
               onChange={updateValue('password')}
               disabled={isSubmitting}
-              className={`${inputClasses(fieldErrors.password)} h-12`}
+              className={`${inputClasses(!!fieldErrors.password)} h-12`}
             />
             <p className="text-xs text-slate-500">Must be at least 8 characters long.</p>
             {fieldErrors.password ? <p className="text-xs text-rose-600">{fieldErrors.password}</p> : null}
@@ -207,7 +207,7 @@ export default function TeacherRegistrationPage() {
               value={values.confirmPassword}
               onChange={updateValue('confirmPassword')}
               disabled={isSubmitting}
-              className={`${inputClasses(fieldErrors.confirmPassword)} h-12`}
+              className={`${inputClasses(!!fieldErrors.confirmPassword)} h-12`}
             />
             {fieldErrors.confirmPassword ? <p className="text-xs text-rose-600">{fieldErrors.confirmPassword}</p> : null}
           </div>
@@ -255,4 +255,3 @@ export default function TeacherRegistrationPage() {
     </main>
   );
 }
-
