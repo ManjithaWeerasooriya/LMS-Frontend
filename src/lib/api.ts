@@ -1,8 +1,12 @@
 import axios from "axios";
 
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:5251"
-).replace(/\/+$/, "");
+const API_URL = (process.env.NEXT_PUBLIC_API_URL?.trim() || "").replace(/\/+$/, "");
+
+if (!API_URL) {
+  console.warn(
+    "NEXT_PUBLIC_API_URL is not set. Add it in Vercel Environment Variables and redeploy."
+  );
+}
 
 export const API_BASE_URL = API_URL;
 
