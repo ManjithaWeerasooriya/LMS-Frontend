@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { apiConfig } from '@/lib/config';
@@ -35,6 +35,14 @@ const extractErrors = (value: unknown): string[] => {
 };
 
 export default function ConfirmEmailPage() {
+  return (
+    <Suspense fallback={<ConfirmEmailFallback />}>
+      <ConfirmEmailContent />
+    </Suspense>
+  );
+}
+
+function ConfirmEmailContent() {
   const searchParams = useSearchParams();
   const paramsKey = useMemo(() => searchParams.toString(), [searchParams]);
   const [status, setStatus] = useState<Status>('loading');
@@ -149,6 +157,22 @@ export default function ConfirmEmailPage() {
             >
               Go to Login
             </Link>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmEmailFallback() {
+  return (
+    <div className="min-h-screen bg-slate-100 px-4 py-10">
+      <div className="mx-auto flex max-w-3xl justify-center">
+        <section className="w-full rounded-[32px] bg-white p-10 text-center shadow-2xl">
+          <p className="text-sm uppercase tracking-[0.4em] text-blue-600">Email Confirmation</p>
+          <h1 className="mt-3 text-3xl font-semibold text-slate-900">Loading confirmation…</h1>
+          <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 px-6 py-5 text-slate-700">
+            <p className="text-base font-semibold">Preparing your confirmation status...</p>
           </div>
         </section>
       </div>

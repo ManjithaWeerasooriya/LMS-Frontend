@@ -1,4 +1,4 @@
-import axios, { isAxiosError, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosHeaders, isAxiosError, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
 import { apiConfig } from '@/lib/config';
 import { clearStoredAuth, getStoredAuthToken, getStoredRefreshToken } from '@/lib/auth';
@@ -90,10 +90,11 @@ const refreshAuthToken = async (): Promise<string> => {
 apiClient.interceptors.request.use((config) => {
   const token = getStoredAuthToken();
   if (token) {
-    config.headers = config.headers ?? {};
-    if (!config.headers.Authorization) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const headers = AxiosHeaders.from(config.headers ?? {});
+    if (!headers.get('Authorization')) {
+      headers.set('Authorization', `Bearer ${token}`);
     }
+    config.headers = headers;
   }
   return config;
 });
@@ -122,8 +123,9 @@ apiClient.interceptors.response.use(
       try {
         const newToken = await refreshPromise;
         processQueue(null, newToken);
-        originalRequest.headers = originalRequest.headers ?? {};
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        const headers = AxiosHeaders.from(originalRequest.headers ?? {});
+        headers.set('Authorization', `Bearer ${newToken}`);
+        originalRequest.headers = headers;
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
@@ -139,10 +141,9 @@ apiClient.interceptors.response.use(
     return new Promise((resolve, reject) => {
       pendingRequests.push({
         resolve: (token: string) => {
-          if (!originalRequest.headers) {
-            originalRequest.headers = {};
-          }
-          originalRequest.headers.Authorization = `Bearer ${token}`;
+          const headers = AxiosHeaders.from(originalRequest.headers ?? {});
+          headers.set('Authorization', `Bearer ${token}`);
+          originalRequest.headers = headers;
           resolve(apiClient(originalRequest));
         },
         reject,

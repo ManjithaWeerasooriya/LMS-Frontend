@@ -2,11 +2,19 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 
 import { resetPassword, UserApiError } from '@/lib/user';
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<ResetPasswordFallback />}>
+      <ResetPasswordContent />
+    </Suspense>
+  );
+}
+
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [newPassword, setNewPassword] = useState('');
@@ -137,6 +145,18 @@ export default function ResetPasswordPage() {
             Back to login
           </Link>
         </p>
+      </div>
+    </div>
+  );
+}
+
+function ResetPasswordFallback() {
+  return (
+    <div className="min-h-screen bg-slate-100 px-4 py-10">
+      <div className="mx-auto max-w-lg rounded-3xl bg-white p-8 shadow-2xl">
+        <p className="text-sm uppercase tracking-[0.4em] text-blue-600">Account Security</p>
+        <h1 className="mt-2 text-3xl font-semibold text-slate-900">Preparing reset form…</h1>
+        <p className="mt-1 text-sm text-slate-500">Loading your reset link details...</p>
       </div>
     </div>
   );

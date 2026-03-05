@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { clearStoredAuth } from '@/lib/auth';
@@ -10,6 +10,14 @@ import { confirmAccountDeletion, UserApiError } from '@/lib/user';
 type Status = 'loading' | 'success' | 'error';
 
 export default function ConfirmDeletePage() {
+  return (
+    <Suspense fallback={<ConfirmDeleteFallback />}>
+      <ConfirmDeleteContent />
+    </Suspense>
+  );
+}
+
+function ConfirmDeleteContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const paramsKey = useMemo(() => searchParams.toString(), [searchParams]);
@@ -101,6 +109,22 @@ export default function ConfirmDeletePage() {
             >
               Go to Login
             </Link>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmDeleteFallback() {
+  return (
+    <div className="min-h-screen bg-slate-100 px-4 py-10">
+      <div className="mx-auto flex max-w-3xl justify-center">
+        <section className="w-full rounded-[32px] bg-white p-10 text-center shadow-2xl">
+          <p className="text-sm uppercase tracking-[0.4em] text-blue-600">Account Deletion</p>
+          <h1 className="mt-3 text-3xl font-semibold text-slate-900">Loading status…</h1>
+          <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 px-6 py-5 text-slate-700">
+            <p className="text-base font-semibold">Preparing your deletion request...</p>
           </div>
         </section>
       </div>
