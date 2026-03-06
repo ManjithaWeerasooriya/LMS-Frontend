@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 
+import { useConfirm } from '@/context/ConfirmContext';
 import { resetPassword, UserApiError } from '@/lib/user';
 
 export default function ResetPasswordPage() {
@@ -23,6 +24,7 @@ function ResetPasswordContent() {
   const [details, setDetails] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const confirm = useConfirm();
 
   const userId = useMemo(() => searchParams.get('userId') ?? searchParams.get('userid'), [searchParams]);
   const token = useMemo(() => searchParams.get('token'), [searchParams]);
@@ -44,6 +46,18 @@ function ResetPasswordContent() {
     }
     if (newPassword !== confirmPassword) {
       setFormError('Passwords do not match.');
+      return;
+    }
+
+    const approved = await confirm({
+      title: 'Reset password now?',
+      description: 'Resetting signs you out everywhere and cannot be undone.',
+      variant: 'warning',
+      confirmText: 'Reset Password',
+      cancelText: 'Cancel',
+    });
+
+    if (!approved) {
       return;
     }
 

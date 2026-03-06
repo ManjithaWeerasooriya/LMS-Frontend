@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { AdminUserTable } from '@/app/dashboard/admin/_components/AdminUserTable';
+import { useConfirm } from '@/context/ConfirmContext';
 import {
   AdminApiError,
   approveTeacher,
@@ -26,6 +27,7 @@ type ActionType = 'suspend' | 'reactivate' | 'approve' | 'reject';
 
 export default function AdminUserManagementPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [roleFilter, setRoleFilter] = useState<'All' | AdminUserRole>('All');
   const [statusFilter, setStatusFilter] = useState<'All' | AdminUserStatus>('All');
   const [pageNumber, setPageNumber] = useState(1);
@@ -131,9 +133,19 @@ export default function AdminUserManagementPage() {
 
   const onSuspend = useCallback(
     (userId: string) => {
-      void runAction(userId, 'suspend', () => suspendUser(userId, ''), 'User suspended.');
+      void (async () => {
+        const approved = await confirm({
+          title: 'Suspend this user?',
+          description: 'Suspended users cannot sign in until you reactivate them.',
+          variant: 'warning',
+          confirmText: 'Suspend User',
+          cancelText: 'Keep Active',
+        });
+        if (!approved) return;
+        await runAction(userId, 'suspend', () => suspendUser(userId, ''), 'User suspended.');
+      })();
     },
-    [runAction],
+    [confirm, runAction],
   );
 
   const onReactivate = useCallback(
@@ -145,16 +157,36 @@ export default function AdminUserManagementPage() {
 
   const onApprove = useCallback(
     (userId: string) => {
-      void runAction(userId, 'approve', () => approveTeacher(userId), 'Teacher approved.');
+      void (async () => {
+        const approved = await confirm({
+          title: 'Approve this teacher?',
+          description: 'They will gain immediate access to instructor tools.',
+          variant: 'default',
+          confirmText: 'Approve',
+          cancelText: 'Not Now',
+        });
+        if (!approved) return;
+        await runAction(userId, 'approve', () => approveTeacher(userId), 'Teacher approved.');
+      })();
     },
-    [runAction],
+    [confirm, runAction],
   );
 
   const onReject = useCallback(
     (userId: string) => {
-      void runAction(userId, 'reject', () => rejectTeacher(userId), 'Teacher rejected.');
+      void (async () => {
+        const approved = await confirm({
+          title: 'Reject this application?',
+          description: 'The applicant will be notified and must reapply to be considered again.',
+          variant: 'danger',
+          confirmText: 'Reject',
+          cancelText: 'Cancel',
+        });
+        if (!approved) return;
+        await runAction(userId, 'reject', () => rejectTeacher(userId), 'Teacher rejected.');
+      })();
     },
-    [runAction],
+    [confirm, runAction],
   );
 
   const canGoPrev = pageNumber > 1;
