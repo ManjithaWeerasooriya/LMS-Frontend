@@ -69,6 +69,7 @@ function normalizeRole(role?: string | null): UserRole | undefined {
 
 export class LoginError extends Error {
   public status?: number;
+
   constructor(message: string, status?: number) {
     super(message);
     this.name = 'LoginError';
@@ -79,6 +80,7 @@ export class LoginError extends Error {
 export class RegisterError extends Error {
   public status?: number;
   public details?: string[];
+
   constructor(message: string, status?: number, details?: string[]) {
     super(message);
     this.name = 'RegisterError';
@@ -110,8 +112,9 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
       headers: { 'Content-Type': 'application/json' },
     });
 
-    if (!data?.accessToken || !data.refreshToken)
+    if (!data?.accessToken || !data.refreshToken) {
       throw new LoginError('Unexpected response from server.');
+    }
 
     const tokenType = data.tokenType?.trim() || DEFAULT_TOKEN_TYPE;
     const expiresIn =
@@ -155,8 +158,9 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
 
       if (status === 401) throw new LoginError('Invalid credentials', 401);
       if (status === 403) throw new LoginError('Account pending approval or suspended', 403);
-      if (typeof status === 'number' && status >= 500)
+      if (typeof status === 'number' && status >= 500) {
         throw new LoginError('Unable to sign in. Please try again later.', status);
+      }
       if (typeof status === 'number') {
         throw new LoginError(
           errorPayload?.message || 'Unable to sign in. Please try again later.',
@@ -170,7 +174,13 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
   }
 }
 
-const AUTH_STORAGE_KEYS = ['authToken', 'refreshToken', 'authTokenType', 'authTokenExpiresAt', 'userRole'] as const;
+const AUTH_STORAGE_KEYS = [
+  'authToken',
+  'refreshToken',
+  'authTokenType',
+  'authTokenExpiresAt',
+  'userRole',
+] as const;
 
 export function getStoredAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -209,6 +219,7 @@ function decodeBase64Url(input: string): string {
 
 export function decodeJwt(token: string | null | undefined): DecodedJwt | null {
   if (!token) return null;
+
   try {
     const [, payload] = token.split('.');
     if (!payload) return null;
@@ -231,6 +242,7 @@ export async function logoutUser(): Promise<void> {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
+
       if (token) {
         headers.Authorization = `Bearer ${token}`;
       }
@@ -263,12 +275,14 @@ function parseErrorPayload(payload: unknown): { message?: string; details: strin
 
   const fromArray = (value: unknown) => {
     if (!Array.isArray(value)) return;
+
     value.forEach((item) => {
       if (typeof item === 'string') {
         recordDetail(item);
       } else if (item && typeof item === 'object') {
         const description = (item as { description?: string }).description;
         const message = (item as { message?: string }).message;
+
         if (typeof description === 'string') recordDetail(description);
         if (typeof message === 'string') recordDetail(message);
       }
@@ -279,6 +293,7 @@ function parseErrorPayload(payload: unknown): { message?: string; details: strin
     fromArray(payload);
   } else if (payload && typeof payload === 'object') {
     const value = payload as ErrorPayload;
+
     if (Array.isArray(value.errors)) {
       fromArray(value.errors);
     } else if (value.errors && typeof value.errors === 'object') {
@@ -325,6 +340,7 @@ export async function registerUser(payload: RegisterPayload): Promise<RegisterRe
 
   const rawBody = await response.text();
   let data: unknown = null;
+
   if (rawBody) {
     try {
       data = JSON.parse(rawBody);
@@ -335,7 +351,11 @@ export async function registerUser(payload: RegisterPayload): Promise<RegisterRe
 
   if (!response.ok) {
     const { message, details } = parseErrorPayload(data);
-    throw new RegisterError(message || 'Unable to register. Please try again.', response.status, details);
+    throw new RegisterError(
+      message || 'Unable to register. Please try again.',
+      response.status,
+      details
+    );
   }
 
   if (data && typeof data === 'object') {
