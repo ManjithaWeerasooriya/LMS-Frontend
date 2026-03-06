@@ -1,14 +1,30 @@
-import axios from "axios";
+import axios from 'axios';
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL?.trim() || "").replace(/\/+$/, "");
+const DEFAULT_LOCAL_API_URL = 'http://localhost:5251';
 
-if (!API_URL) {
-  console.warn(
-    "NEXT_PUBLIC_API_URL is not set. Add it in Vercel Environment Variables and redeploy."
-  );
-}
+const resolveApiUrl = (): string => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, '');
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'Missing NEXT_PUBLIC_API_URL in production. Set it in your deployment environment and redeploy.'
+    );
+  }
+
+  return DEFAULT_LOCAL_API_URL;
+};
+
+const API_URL = resolveApiUrl();
 
 export const API_BASE_URL = API_URL;
+
+if (process.env.NODE_ENV === 'production') {
+  console.info(`[api] Resolved API base URL: ${API_URL}`);
+}
 
 export const api = axios.create({
   baseURL: API_URL,
