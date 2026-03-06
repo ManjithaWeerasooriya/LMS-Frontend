@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { useConfirm } from '@/context/ConfirmContext';
 import { clearStoredAuth } from '@/lib/auth';
 import { confirmAccountDeletion, UserApiError } from '@/lib/user';
 
@@ -24,6 +25,7 @@ function ConfirmDeleteContent() {
   const [status, setStatus] = useState<Status>('loading');
   const [message, setMessage] = useState('Finalizing your account deletion...');
   const [details, setDetails] = useState<string[]>([]);
+  const confirm = useConfirm();
 
   useEffect(() => {
     let cancelled = false;
@@ -40,11 +42,28 @@ function ConfirmDeleteContent() {
         return;
       }
 
-      setStatus('loading');
-      setMessage('Finalizing your account deletion...');
-      setDetails([]);
-
       try {
+        setStatus('loading');
+        setMessage('Finalizing your account deletion...');
+        setDetails([]);
+
+        const approved = await confirm({
+          title: 'Finalize account deletion?',
+          description: 'Confirming will permanently remove your LMS account and sign you out everywhere.',
+          variant: 'danger',
+          confirmText: 'Delete Account',
+          cancelText: 'Keep Account',
+        });
+
+        if (!approved) {
+          if (!cancelled) {
+            setStatus('error');
+            setMessage('Account deletion was canceled. Close this page to keep your account.');
+            setDetails([]);
+          }
+          return;
+        }
+
         const response = await confirmAccountDeletion({ userId, token });
         if (cancelled) return;
         clearStoredAuth();
@@ -73,7 +92,7 @@ function ConfirmDeleteContent() {
     return () => {
       cancelled = true;
     };
-  }, [paramsKey, router]);
+  }, [confirm, paramsKey, router]);
 
   const statusClasses =
     status === 'success'

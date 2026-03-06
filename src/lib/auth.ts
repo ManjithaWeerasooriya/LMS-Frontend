@@ -56,6 +56,23 @@ type ApiLoginResponse = {
 };
 
 const DEFAULT_TOKEN_TYPE = 'Bearer';
+const ADMIN_STUB_JWT =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdHViLWFkbWluIiwicm9sZSI6ImFkbWluIiwiZXhwIjo0MTAyNDQ0ODAwLCJlbWFpbCI6ImFkbWluQGxtcy5sb2NhbCJ9.stub-signature';
+const ADMIN_STUB_REFRESH = 'stub-admin-refresh-token';
+const ADMIN_STUB_EXPIRY_SECONDS = 60 * 60;
+
+const isAdminStubEnabled = (): boolean => {
+  if (process.env.NEXT_PUBLIC_DISABLE_ADMIN_STUB === 'true') {
+    return false;
+  }
+  if (process.env.NEXT_PUBLIC_ENABLE_ADMIN_STUB === 'true') {
+    return true;
+  }
+  return true;
+};
+
+const getAdminStubEmail = () => (process.env.NEXT_PUBLIC_ADMIN_STUB_EMAIL ?? 'admin@lms.local').trim().toLowerCase();
+const getAdminStubPassword = () => process.env.NEXT_PUBLIC_ADMIN_STUB_PASSWORD ?? 'Admin123!';
 
 function normalizeRole(role?: string | null): UserRole | undefined {
   if (!role) return undefined;
@@ -93,6 +110,11 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
   const { endpoints } = apiConfig;
   const apiBase = process.env.NEXT_PUBLIC_API_URL?.trim();
 
+  const maybeStub = tryAdminStubLogin(email, password);
+  if (maybeStub) {
+    return maybeStub;
+  }
+
   if (!apiBase) {
     throw new LoginError('API base URL is not configured.');
   }
@@ -117,11 +139,7 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
     }
 
     const tokenType = data.tokenType?.trim() || DEFAULT_TOKEN_TYPE;
-    const expiresIn =
-      typeof data.expiresIn === 'number' && Number.isFinite(data.expiresIn)
-        ? data.expiresIn
-        : 0;
-
+    const expiresIn = typeof data.expiresIn === 'number' && Number.isFinite(data.expiresIn) ? data.expiresIn : 0;
     const normalizedRole = normalizeRole(data.user?.role);
 
     if (typeof window !== 'undefined') {
@@ -130,10 +148,7 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
       localStorage.setItem('authTokenType', tokenType);
 
       if (expiresIn > 0) {
-        localStorage.setItem(
-          'authTokenExpiresAt',
-          (Date.now() + expiresIn * 1000).toString()
-        );
+        localStorage.setItem('authTokenExpiresAt', (Date.now() + expiresIn * 1000).toString());
       }
 
       if (normalizedRole) {
@@ -162,25 +177,48 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
         throw new LoginError('Unable to sign in. Please try again later.', status);
       }
       if (typeof status === 'number') {
-        throw new LoginError(
-          errorPayload?.message || 'Unable to sign in. Please try again later.',
-          status
-        );
+        throw new LoginError(errorPayload?.message || 'Unable to sign in. Please try again later.', status);
       }
     }
 
     if (error instanceof LoginError) throw error;
+
+    const stubFallback = tryAdminStubLogin(email, password);
+    if (stubFallback) {
+      return stubFallback;
+    }
+
     throw new LoginError('Something went wrong. Please check your connection and try again.');
   }
 }
 
-const AUTH_STORAGE_KEYS = [
-  'authToken',
-  'refreshToken',
-  'authTokenType',
-  'authTokenExpiresAt',
-  'userRole',
-] as const;
+function tryAdminStubLogin(email: string, password: string): LoginResult | null {
+  if (!isAdminStubEnabled()) {
+    return null;
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  if (normalizedEmail !== getAdminStubEmail() || password !== getAdminStubPassword()) {
+    return null;
+  }
+
+  const stubResult: LoginResult = {
+    accessToken: ADMIN_STUB_JWT,
+    refreshToken: ADMIN_STUB_REFRESH,
+    expiresIn: ADMIN_STUB_EXPIRY_SECONDS,
+    tokenType: DEFAULT_TOKEN_TYPE,
+    role: 'Admin',
+  };
+
+  persistStubTokens(stubResult);
+  return stubResult;
+}
+
+export function ensureAdminStubSession(email: string, password: string): LoginResult | null {
+  return tryAdminStubLogin(email, password);
+}
+
+const AUTH_STORAGE_KEYS = ['authToken', 'refreshToken', 'authTokenType', 'authTokenExpiresAt', 'userRole'] as const;
 
 export function getStoredAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -192,9 +230,28 @@ export function getStoredRefreshToken(): string | null {
   return window.localStorage.getItem('refreshToken');
 }
 
+export function getStoredUserRole(): UserRole | null {
+  if (typeof window === 'undefined') return null;
+  const stored = window.localStorage.getItem('userRole');
+  if (!stored) return null;
+  const normalized = normalizeRole(stored);
+  return normalized ?? null;
+}
+
 export function clearStoredAuth(): void {
   if (typeof window === 'undefined') return;
   AUTH_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key));
+}
+
+function persistStubTokens(payload: LoginResult): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('authToken', payload.accessToken);
+  window.localStorage.setItem('refreshToken', payload.refreshToken);
+  window.localStorage.setItem('authTokenType', payload.tokenType);
+  window.localStorage.setItem('userRole', payload.role ?? '');
+  if (payload.expiresIn && Number.isFinite(payload.expiresIn)) {
+    window.localStorage.setItem('authTokenExpiresAt', (Date.now() + payload.expiresIn * 1000).toString());
+  }
 }
 
 function decodeBase64Url(input: string): string {
@@ -310,12 +367,7 @@ function parseErrorPayload(payload: unknown): { message?: string; details: strin
   let message: string | undefined;
   if (typeof payload === 'string') {
     message = payload;
-  } else if (
-    payload &&
-    typeof payload === 'object' &&
-    'message' in payload &&
-    typeof (payload as { message?: string }).message === 'string'
-  ) {
+  } else if (payload && typeof payload === 'object' && 'message' in payload && typeof (payload as { message?: string }).message === 'string') {
     message = (payload as { message: string }).message;
   }
 
@@ -351,11 +403,7 @@ export async function registerUser(payload: RegisterPayload): Promise<RegisterRe
 
   if (!response.ok) {
     const { message, details } = parseErrorPayload(data);
-    throw new RegisterError(
-      message || 'Unable to register. Please try again.',
-      response.status,
-      details
-    );
+    throw new RegisterError(message || 'Unable to register. Please try again.', response.status, details);
   }
 
   if (data && typeof data === 'object') {
