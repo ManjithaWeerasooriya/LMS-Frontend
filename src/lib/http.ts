@@ -59,6 +59,10 @@ const storeAuthTokens = (payload: RefreshResponse) => {
   if (typeof window === 'undefined') {
     return;
   }
+  console.log('[refreshAuthToken] Replacing tokens in storage:', {
+    accessTokenPreview: payload.accessToken ? `${payload.accessToken.slice(0, 12)}...` : null,
+    refreshTokenPreview: payload.refreshToken ? `${payload.refreshToken.slice(0, 12)}...` : null,
+  });
   window.localStorage.setItem('authToken', payload.accessToken);
   window.localStorage.setItem('refreshToken', payload.refreshToken);
   if (payload.tokenType) {
@@ -68,11 +72,18 @@ const storeAuthTokens = (payload: RefreshResponse) => {
     window.localStorage.setItem('authTokenExpiresAt', (Date.now() + payload.expiresIn * 1000).toString());
   }
   apiClient.defaults.headers.common.Authorization = `Bearer ${payload.accessToken}`;
+  console.log('[refreshAuthToken] apiClient Authorization header updated');
 };
 
 const refreshAuthToken = async (): Promise<string> => {
   const refreshToken = getStoredRefreshToken();
   const deviceId = getDeviceId();
+
+  console.log('[refreshAuthToken] DeviceId resolved for refresh:', deviceId);
+  console.log('[refreshAuthToken] Request payload:', {
+    deviceId,
+    refreshTokenPreview: refreshToken ? `${refreshToken.slice(0, 8)}...` : null,
+  });
 
   if (!refreshToken || !deviceId) {
     throw new Error('Missing refresh credentials');
@@ -82,6 +93,8 @@ const refreshAuthToken = async (): Promise<string> => {
     refreshToken,
     deviceId,
   });
+
+  console.log('[refreshAuthToken] Response data:', response.data);
 
   storeAuthTokens(response.data);
   return response.data.accessToken;
