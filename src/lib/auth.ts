@@ -1,7 +1,6 @@
 import { apiConfig } from '@/lib/config';
 import { getDeviceId } from '@/lib/device';
-import { api } from '@/lib/api';
-import { isAxiosError } from 'axios';
+import axios, { isAxiosError } from 'axios';
 
 export type UserRole = 'Student' | 'Instructor' | 'Admin';
 export type RegistrationRole = 'Student' | 'Teacher';
@@ -90,18 +89,24 @@ export class RegisterError extends Error {
 
 export async function loginUser({ email, password }: LoginParams): Promise<LoginResult> {
   const { endpoints } = apiConfig;
+  const apiBase = process.env.NEXT_PUBLIC_API_URL?.trim();
 
-  const rawDeviceId = getDeviceId();
-  const normalizedDeviceId = typeof rawDeviceId === 'string' ? rawDeviceId.trim() : '';
-  const deviceId =
-    normalizedDeviceId.length > 0
-      ? normalizedDeviceId
-      : `fallback-${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
+  if (!apiBase) {
+    throw new LoginError('API base URL is not configured.');
+  }
+
+  const normalizedBase = apiBase.replace(/\/+$/, '');
+  const loginUrl = `${normalizedBase}${endpoints.auth.login}`;
+
+  const deviceId = getDeviceId();
+  if (!deviceId) {
+    throw new LoginError('Unable to determine device identifier.');
+  }
 
   const requestBody = { email, password, deviceId };
 
   try {
-    const { data } = await api.post<ApiLoginResponse>(endpoints.auth.login, requestBody, {
+    const { data } = await axios.post<ApiLoginResponse>(loginUrl, requestBody, {
       headers: { 'Content-Type': 'application/json' },
     });
 
