@@ -101,6 +101,12 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
   const requestBody = { email, password, deviceId };
 
   try {
+    const baseUrl = api.defaults.baseURL ?? '';
+    const finalLoginUrl = `${baseUrl.replace(/\/+$/, '')}/${endpoints.auth.login.replace(/^\/+/, '')}`;
+    console.info('[loginUser] api.defaults.baseURL:', baseUrl);
+    console.info('[loginUser] endpoints.auth.login:', endpoints.auth.login);
+    console.info('[loginUser] final login URL:', finalLoginUrl);
+
     const { data } = await api.post<ApiLoginResponse>(endpoints.auth.login, requestBody, {
       headers: { 'Content-Type': 'application/json' },
     });
