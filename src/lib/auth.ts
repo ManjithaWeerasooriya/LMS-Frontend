@@ -86,6 +86,7 @@ function normalizeRole(role?: string | null): UserRole | undefined {
 
 export class LoginError extends Error {
   public status?: number;
+
   constructor(message: string, status?: number) {
     super(message);
     this.name = 'LoginError';
@@ -96,6 +97,7 @@ export class LoginError extends Error {
 export class RegisterError extends Error {
   public status?: number;
   public details?: string[];
+
   constructor(message: string, status?: number, details?: string[]) {
     super(message);
     this.name = 'RegisterError';
@@ -132,15 +134,12 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
       headers: { 'Content-Type': 'application/json' },
     });
 
-    if (!data?.accessToken || !data.refreshToken)
+    if (!data?.accessToken || !data.refreshToken) {
       throw new LoginError('Unexpected response from server.');
+    }
 
     const tokenType = data.tokenType?.trim() || DEFAULT_TOKEN_TYPE;
-    const expiresIn =
-      typeof data.expiresIn === 'number' && Number.isFinite(data.expiresIn)
-        ? data.expiresIn
-        : 0;
-
+    const expiresIn = typeof data.expiresIn === 'number' && Number.isFinite(data.expiresIn) ? data.expiresIn : 0;
     const normalizedRole = normalizeRole(data.user?.role);
 
     if (typeof window !== 'undefined') {
@@ -149,10 +148,7 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
       localStorage.setItem('authTokenType', tokenType);
 
       if (expiresIn > 0) {
-        localStorage.setItem(
-          'authTokenExpiresAt',
-          (Date.now() + expiresIn * 1000).toString()
-        );
+        localStorage.setItem('authTokenExpiresAt', (Date.now() + expiresIn * 1000).toString());
       }
 
       if (normalizedRole) {
@@ -177,13 +173,11 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
 
       if (status === 401) throw new LoginError('Invalid credentials', 401);
       if (status === 403) throw new LoginError('Account pending approval or suspended', 403);
-      if (typeof status === 'number' && status >= 500)
+      if (typeof status === 'number' && status >= 500) {
         throw new LoginError('Unable to sign in. Please try again later.', status);
+      }
       if (typeof status === 'number') {
-        throw new LoginError(
-          errorPayload?.message || 'Unable to sign in. Please try again later.',
-          status
-        );
+        throw new LoginError(errorPayload?.message || 'Unable to sign in. Please try again later.', status);
       }
     }
 
@@ -202,6 +196,7 @@ function tryAdminStubLogin(email: string, password: string): LoginResult | null 
   if (!isAdminStubEnabled()) {
     return null;
   }
+
   const normalizedEmail = email.trim().toLowerCase();
   if (normalizedEmail !== getAdminStubEmail() || password !== getAdminStubPassword()) {
     return null;
@@ -281,6 +276,7 @@ function decodeBase64Url(input: string): string {
 
 export function decodeJwt(token: string | null | undefined): DecodedJwt | null {
   if (!token) return null;
+
   try {
     const [, payload] = token.split('.');
     if (!payload) return null;
@@ -303,6 +299,7 @@ export async function logoutUser(): Promise<void> {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
+
       if (token) {
         headers.Authorization = `Bearer ${token}`;
       }
@@ -335,12 +332,14 @@ function parseErrorPayload(payload: unknown): { message?: string; details: strin
 
   const fromArray = (value: unknown) => {
     if (!Array.isArray(value)) return;
+
     value.forEach((item) => {
       if (typeof item === 'string') {
         recordDetail(item);
       } else if (item && typeof item === 'object') {
         const description = (item as { description?: string }).description;
         const message = (item as { message?: string }).message;
+
         if (typeof description === 'string') recordDetail(description);
         if (typeof message === 'string') recordDetail(message);
       }
@@ -351,6 +350,7 @@ function parseErrorPayload(payload: unknown): { message?: string; details: strin
     fromArray(payload);
   } else if (payload && typeof payload === 'object') {
     const value = payload as ErrorPayload;
+
     if (Array.isArray(value.errors)) {
       fromArray(value.errors);
     } else if (value.errors && typeof value.errors === 'object') {
@@ -367,12 +367,7 @@ function parseErrorPayload(payload: unknown): { message?: string; details: strin
   let message: string | undefined;
   if (typeof payload === 'string') {
     message = payload;
-  } else if (
-    payload &&
-    typeof payload === 'object' &&
-    'message' in payload &&
-    typeof (payload as { message?: string }).message === 'string'
-  ) {
+  } else if (payload && typeof payload === 'object' && 'message' in payload && typeof (payload as { message?: string }).message === 'string') {
     message = (payload as { message: string }).message;
   }
 
@@ -397,6 +392,7 @@ export async function registerUser(payload: RegisterPayload): Promise<RegisterRe
 
   const rawBody = await response.text();
   let data: unknown = null;
+
   if (rawBody) {
     try {
       data = JSON.parse(rawBody);
