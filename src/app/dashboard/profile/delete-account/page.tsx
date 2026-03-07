@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import AdminLayout from '@/app/dashboard/admin/layout';
+import { useConfirm } from '@/context/ConfirmContext';
 import { logoutUser } from '@/lib/auth';
 import { requestAccountDeletion, UserApiError } from '@/lib/user';
 
@@ -15,10 +16,23 @@ function DeleteAccountContent() {
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [details, setDetails] = useState<string[]>([]);
+  const confirm = useConfirm();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!isConfirmed || isSubmitting) return;
+
+    const approved = await confirm({
+      title: 'Delete your account?',
+      description: 'This action cannot be undone. All sessions will be terminated.',
+      variant: 'danger',
+      confirmText: 'Delete Account',
+      cancelText: 'Cancel',
+    });
+
+    if (!approved) {
+      return;
+    }
 
     setIsSubmitting(true);
     setStatus('idle');

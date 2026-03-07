@@ -83,7 +83,7 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       <header>
         <p className="text-sm uppercase tracking-[0.4em] text-blue-600">Admin</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-900">Dashboard Overview</h1>
+        <h1 className="mt-2 text-3xl font-semibold text-slate-900">Admin Panel</h1>
         <p className="mt-1 text-sm text-slate-500">Monitor users, courses, and revenue at a glance.</p>
       </header>
 
