@@ -30,7 +30,7 @@ export function CreateQuizModal({ open, onClose }: CreateQuizModalProps) {
         const allCourses = await getTeacherCourses();
         if (!isMounted) return;
         setCourses(allCourses);
-        if (!form.course && allCourses[0]) {
+        if (!form.courseId && allCourses[0]) {
           setForm((prev) => ({ ...prev, courseId: allCourses[0].id }));
         }
       } catch {
@@ -43,7 +43,7 @@ export function CreateQuizModal({ open, onClose }: CreateQuizModalProps) {
     return () => {
       isMounted = false;
     };
-  }, [open, form.course]);
+  }, [open, form.courseId]);
 
   if (!open) return null;
 

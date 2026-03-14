@@ -165,10 +165,10 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
 
         const Icon = item.icon;
         const baseClasses =
-          'flex items-center gap-3 rounded-2xl px-4 py-2 text-sm font-semibold transition';
+          'flex items-center gap-3 rounded-2xl px-5 py-2.5 text-sm font-semibold transition-colors';
         const activeClasses = isActive
-          ? 'bg-white text-[#1B3B8B]'
-          : 'text-slate-100 hover:bg-white/10';
+          ? 'bg-[#1B3B8B] text-white'
+          : 'text-slate-700 hover:bg-slate-100';
         const disabledClasses = item.disabled ? 'cursor-not-allowed opacity-50' : '';
 
         if (item.disabled) {
@@ -258,15 +258,15 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
-      <aside className="hidden w-64 flex-col bg-[#1B3B8B] px-4 py-6 text-slate-50 shadow-2xl md:flex">
+    <div className="flex h-screen bg-slate-100">
+      <aside className="hidden h-full w-64 flex-shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white px-4 py-6 text-slate-900 md:flex">
         <div className="flex items-center gap-3 px-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#1B3B8B] text-white">
             <span className="text-lg font-semibold">GE</span>
           </div>
           <div>
             <p className="text-sm font-semibold leading-tight">Genuine English</p>
-            <p className="text-xs text-slate-200">with Isuru Samarakoon</p>
+            <p className="text-xs text-slate-500">with Isuru Samarakoon</p>
           </div>
         </div>
 
@@ -274,17 +274,19 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
           <ul className="space-y-1 text-sm">{sidebarItems}</ul>
         </nav>
 
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="mt-4 inline-flex items-center gap-3 rounded-2xl px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
-        >
-          <LogOut className="h-4 w-4" />
-          Logout
-        </button>
+        <div className="mt-6 border-t border-slate-200 pt-4">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="inline-flex w-full items-center justify-start gap-3 rounded-2xl px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </button>
+        </div>
       </aside>
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex h-full flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm md:px-6">
           <div className="flex flex-1 items-center gap-4">
             <div className="flex items-center gap-3 md:hidden">

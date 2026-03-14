@@ -198,7 +198,7 @@ export default function TeacherCoursesPage() {
                       <tr key={course.id} className="hover:bg-slate-50/80">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600" />
+                            <div className="h-9 w-9 rounded-2xl bg-linear-to-br from-blue-500 to-indigo-600" />
                             <div>
                               <p className="text-sm font-semibold text-slate-900">
                                 {course.title}
@@ -216,7 +216,7 @@ export default function TeacherCoursesPage() {
                           {course.students}
                         </td>
                         <td className="px-6 py-4 text-slate-700">
-                          ${course.price.toFixed(2)}
+                          Rs: {course.price.toFixed(2)}
                         </td>
                         <td className="px-6 py-4 text-slate-700">
                           {course.rating != null ? `⭐ ${course.rating.toFixed(1)}` : '—'}

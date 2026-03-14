@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { BookOpen, ClipboardList, MonitorPlay, Users } from 'lucide-react';
 import {
   Bar,
   BarChart,
@@ -16,11 +18,13 @@ import {
 
 import {
   getTeacherDashboard,
+  getTeacherCourseById,
   type CompletionRate,
   type DashboardCourse,
   type LiveSession,
   type PendingSubmission,
   type PerformanceSlice,
+  type TeacherCourseDetail,
   type TeacherDashboardSummary,
 } from '@/lib/teacher';
 
@@ -57,6 +61,7 @@ const initialState: DashboardState = {
 const performanceColors = ['#22c55e', '#3b82f6', '#f97316', '#ef4444'];
 
 export default function TeacherDashboardPage() {
+  const router = useRouter();
   const [state, setState] = useState<DashboardState>(initialState);
   const [dashboardCourses, setDashboardCourses] = useState<DashboardCourse[]>([]);
   const [openCourseModal, setOpenCourseModal] =
@@ -65,6 +70,8 @@ export default function TeacherDashboardPage() {
     useState<CreateQuizModalProps['open']>(false);
   const [openLiveClassModal, setOpenLiveClassModal] =
     useState<ScheduleLiveClassModalProps['open']>(false);
+  const [editCourseModalOpen, setEditCourseModalOpen] = useState(false);
+  const [editCourse, setEditCourse] = useState<TeacherCourseDetail | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -103,22 +110,22 @@ export default function TeacherDashboardPage() {
     {
       title: 'My Courses',
       value: state.summary?.myCourses ?? '—',
-      accent: 'bg-blue-100 text-blue-700',
+      accent: 'bg-blue-100 text-blue-600',
     },
     {
       title: 'Total Students',
       value: state.summary?.totalStudents?.toLocaleString() ?? '—',
-      accent: 'bg-emerald-100 text-emerald-700',
+      accent: 'bg-emerald-100 text-emerald-600',
     },
     {
       title: 'Pending Submissions',
       value: state.summary?.pendingSubmissions ?? '—',
-      accent: 'bg-amber-100 text-amber-700',
+      accent: 'bg-amber-100 text-amber-600',
     },
     {
       title: 'Live Sessions',
       value: state.summary?.upcomingLiveSessions ?? '—',
-      accent: 'bg-purple-100 text-purple-700',
+      accent: 'bg-violet-100 text-violet-600',
     },
   ];
 
@@ -141,6 +148,24 @@ export default function TeacherDashboardPage() {
       });
     } catch {
       setState((prev) => ({ ...prev, loading: false, error: 'Unable to load dashboard.' }));
+    }
+  };
+
+  const handleViewCourse = (courseId: string) => {
+    // Navigate to the courses management page; in the future this
+    // can be extended to deep-link to a specific course.
+    if (!courseId) return;
+    router.push('/dashboard/teacher/courses');
+  };
+
+  const handleEditCourse = async (courseId: string) => {
+    if (!courseId) return;
+    try {
+      const fullCourse = await getTeacherCourseById(courseId);
+      setEditCourse(fullCourse);
+      setEditCourseModalOpen(true);
+    } catch {
+      // Could surface a toast here in the future.
     }
   };
 
@@ -170,7 +195,7 @@ export default function TeacherDashboardPage() {
                   {card.title}
                 </p>
                 <span
-                  className={`inline-flex h-8 w-8 items-center justify-center rounded-2xl text-xs font-semibold ${card.accent}`}
+                  className={`hidden ${card.accent}`}
                 >
                   {card.title === 'My Courses'
                     ? '📘'
@@ -179,6 +204,20 @@ export default function TeacherDashboardPage() {
                     : card.title === 'Pending Submissions'
                     ? '📝'
                     : '🎥'}
+                </span>
+                <span
+                  className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${card.accent}`}
+                  aria-hidden="true"
+                >
+                  {card.title === 'My Courses' ? (
+                    <BookOpen className="h-5 w-5" />
+                  ) : card.title === 'Total Students' ? (
+                    <Users className="h-5 w-5" />
+                  ) : card.title === 'Pending Submissions' ? (
+                    <ClipboardList className="h-5 w-5" />
+                  ) : (
+                    <MonitorPlay className="h-5 w-5" />
+                  )}
                 </span>
               </div>
               <p className="mt-3 text-2xl font-semibold text-slate-900">
@@ -265,12 +304,14 @@ export default function TeacherDashboardPage() {
                   <button
                     type="button"
                     className="inline-flex flex-1 items-center justify-center rounded-2xl bg-[#2F7FF8] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#2563eb]"
+                    onClick={() => handleViewCourse(course.courseId)}
                   >
                     View Course
                   </button>
                   <button
                     type="button"
                     className="inline-flex flex-1 items-center justify-center rounded-2xl border border-[#1B3B8B] px-4 py-2 text-xs font-semibold text-[#1B3B8B] transition hover:bg-blue-50"
+                    onClick={() => handleEditCourse(course.courseId)}
                   >
                     Edit
                   </button>
@@ -485,6 +526,13 @@ export default function TeacherDashboardPage() {
       </section>
 
       <CreateCourseModal open={openCourseModal} onClose={() => setOpenCourseModal(false)} />
+      <CreateCourseModal
+        open={editCourseModalOpen}
+        onClose={() => setEditCourseModalOpen(false)}
+        mode="edit"
+        initialCourse={editCourse}
+        onSaved={refreshDashboard}
+      />
       <CreateQuizModal open={openQuizModal} onClose={() => setOpenQuizModal(false)} />
       <ScheduleLiveClassModal
         open={openLiveClassModal}
