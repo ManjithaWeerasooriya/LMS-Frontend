@@ -107,8 +107,9 @@ export class RegisterError extends Error {
 }
 
 export async function loginUser({ email, password }: LoginParams): Promise<LoginResult> {
-  const { endpoints } = apiConfig;
-  const apiBase = process.env.NEXT_PUBLIC_API_URL?.trim();
+  const { endpoints, BASE_URL } = apiConfig as { endpoints: typeof apiConfig.endpoints; BASE_URL: string };
+  const envBase = process.env.NEXT_PUBLIC_API_URL?.trim();
+  const apiBase = (envBase && envBase.length > 0 ? envBase : BASE_URL)?.trim();
 
   const maybeStub = tryAdminStubLogin(email, password);
   if (maybeStub) {
