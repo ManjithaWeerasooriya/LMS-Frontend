@@ -21,13 +21,6 @@ const apiClient = axios.create({
   baseURL: BASE_URL,
 });
 
-if (typeof window !== 'undefined') {
-  const token = window.localStorage.getItem('authToken');
-  if (token) {
-    apiClient.defaults.headers.common.Authorization = `Bearer ${token}`;
-  }
-}
-
 const refreshClient = axios.create({
   baseURL: BASE_URL,
 });
@@ -56,23 +49,29 @@ const redirectToLogin = () => {
 };
 
 const storeAuthTokens = (payload: RefreshResponse) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
+  if (typeof window === 'undefined') return;
+
   console.log('[refreshAuthToken] Replacing tokens in storage:', {
     accessTokenPreview: payload.accessToken ? `${payload.accessToken.slice(0, 12)}...` : null,
     refreshTokenPreview: payload.refreshToken ? `${payload.refreshToken.slice(0, 12)}...` : null,
   });
+
   window.localStorage.setItem('authToken', payload.accessToken);
   window.localStorage.setItem('refreshToken', payload.refreshToken);
+
   if (payload.tokenType) {
     window.localStorage.setItem('authTokenType', payload.tokenType);
   }
+
   if (payload.expiresIn && Number.isFinite(payload.expiresIn)) {
-    window.localStorage.setItem('authTokenExpiresAt', (Date.now() + payload.expiresIn * 1000).toString());
+    window.localStorage.setItem(
+      'authTokenExpiresAt',
+      (Date.now() + payload.expiresIn * 1000).toString(),
+    );
   }
-  apiClient.defaults.headers.common.Authorization = `Bearer ${payload.accessToken}`;
-  console.log('[refreshAuthToken] apiClient Authorization header updated');
+
+  // DO NOT set apiClient.defaults.headers here
+  // Interceptor is the single source of truth
 };
 
 const refreshAuthToken = async (): Promise<string> => {
@@ -102,13 +101,19 @@ const refreshAuthToken = async (): Promise<string> => {
 
 apiClient.interceptors.request.use((config) => {
   const token = getStoredAuthToken();
+  const headers = AxiosHeaders.from(config.headers ?? {});
+
+  console.log('[apiClient] token from storage:', token ? `${token.slice(0, 12)}...` : null);
+
   if (token) {
-    const headers = AxiosHeaders.from(config.headers ?? {});
-    if (!headers.get('Authorization')) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
-    config.headers = headers;
+    headers.set('Authorization', `Bearer ${token}`);
+  } else {
+    headers.delete('Authorization');
   }
+
+  console.log('[apiClient] attaching Authorization header:', headers.get('Authorization') ?? 'none');
+
+  config.headers = headers;
   return config;
 });
 
@@ -136,9 +141,11 @@ apiClient.interceptors.response.use(
       try {
         const newToken = await refreshPromise;
         processQueue(null, newToken);
+
         const headers = AxiosHeaders.from(originalRequest.headers ?? {});
         headers.set('Authorization', `Bearer ${newToken}`);
         originalRequest.headers = headers;
+
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
@@ -166,4 +173,9 @@ apiClient.interceptors.response.use(
 );
 
 export const isAxiosAuthError = (error: unknown): error is AxiosError => isAxiosError(error);
+
+export const clearApiAuthorizationHeader = () => {
+  delete apiClient.defaults.headers.common.Authorization;
+};
+
 export { apiClient };
