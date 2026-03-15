@@ -1,4 +1,4 @@
-import axios, { isAxiosError, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosHeaders, isAxiosError, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
 import { apiConfig } from '@/lib/config';
 import { clearStoredAuth, getStoredAuthToken, getStoredRefreshToken } from '@/lib/auth';
@@ -20,13 +20,6 @@ const { BASE_URL, endpoints } = apiConfig;
 const apiClient = axios.create({
   baseURL: BASE_URL,
 });
-
-if (typeof window !== 'undefined') {
-  const token = window.localStorage.getItem('authToken');
-  if (token) {
-    apiClient.defaults.headers.common.Authorization = `Bearer ${token}`;
-  }
-}
 
 const refreshClient = axios.create({
   baseURL: BASE_URL,
@@ -67,7 +60,6 @@ const storeAuthTokens = (payload: RefreshResponse) => {
   if (payload.expiresIn && Number.isFinite(payload.expiresIn)) {
     window.localStorage.setItem('authTokenExpiresAt', (Date.now() + payload.expiresIn * 1000).toString());
   }
-  apiClient.defaults.headers.common.Authorization = `Bearer ${payload.accessToken}`;
 };
 
 const refreshAuthToken = async (): Promise<string> => {
@@ -89,12 +81,19 @@ const refreshAuthToken = async (): Promise<string> => {
 
 apiClient.interceptors.request.use((config) => {
   const token = getStoredAuthToken();
+  const headers = AxiosHeaders.from(config.headers ?? {});
+
+  console.log('[apiClient] token from storage:', token ? `${token.slice(0, 12)}...` : null);
+
   if (token) {
-    config.headers = config.headers ?? {};
-    if (!config.headers.Authorization) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    headers.set('Authorization', `Bearer ${token}`);
+  } else {
+    headers.delete('Authorization');
   }
+
+  console.log('[apiClient] attaching Authorization header:', headers.get('Authorization') ?? 'none');
+
+  config.headers = headers;
   return config;
 });
 
@@ -122,8 +121,9 @@ apiClient.interceptors.response.use(
       try {
         const newToken = await refreshPromise;
         processQueue(null, newToken);
-        originalRequest.headers = originalRequest.headers ?? {};
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        const headers = AxiosHeaders.from(originalRequest.headers ?? {});
+        headers.set('Authorization', `Bearer ${newToken}`);
+        originalRequest.headers = headers;
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
@@ -139,10 +139,9 @@ apiClient.interceptors.response.use(
     return new Promise((resolve, reject) => {
       pendingRequests.push({
         resolve: (token: string) => {
-          if (!originalRequest.headers) {
-            originalRequest.headers = {};
-          }
-          originalRequest.headers.Authorization = `Bearer ${token}`;
+          const headers = AxiosHeaders.from(originalRequest.headers ?? {});
+          headers.set('Authorization', `Bearer ${token}`);
+          originalRequest.headers = headers;
           resolve(apiClient(originalRequest));
         },
         reject,
@@ -152,4 +151,8 @@ apiClient.interceptors.response.use(
 );
 
 export const isAxiosAuthError = (error: unknown): error is AxiosError => isAxiosError(error);
+export const clearApiAuthorizationHeader = () => {
+  delete apiClient.defaults.headers.common.Authorization;
+};
+
 export { apiClient };
