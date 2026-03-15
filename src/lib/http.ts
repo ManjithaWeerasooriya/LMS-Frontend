@@ -142,7 +142,13 @@ apiClient.interceptors.request.use((config) => {
   }
 
   const rawAuthorization = headers.get('Authorization');
-  const authPreview = rawAuthorization ? `${rawAuthorization.slice(0, 35)}...` : 'none';
+  const normalizedAuthorization =
+    typeof rawAuthorization === 'string'
+      ? rawAuthorization
+      : rawAuthorization == null
+        ? null
+        : String(rawAuthorization);
+  const authPreview = normalizedAuthorization ? `${normalizedAuthorization.slice(0, 35)}...` : 'none';
   const requestUrl =
     config.baseURL && config.url && !config.url.startsWith('http')
       ? `${config.baseURL}${config.url}`
