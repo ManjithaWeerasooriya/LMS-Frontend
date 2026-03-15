@@ -1,6 +1,5 @@
-import { API_BASE_URL } from '@/lib/api';
-
-const BASE_URL = API_BASE_URL;
+const BASE_URL =
+  'https://lms-backend-deepana-d3btffd8arg9agcw.southeastasia-01.azurewebsites.net';
 
 const endpoints = {
   auth: {
