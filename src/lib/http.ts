@@ -49,22 +49,40 @@ const redirectToLogin = () => {
 };
 
 const storeAuthTokens = (payload: RefreshResponse) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
+  if (typeof window === 'undefined') return;
+
+  console.log('[refreshAuthToken] Replacing tokens in storage:', {
+    accessTokenPreview: payload.accessToken ? `${payload.accessToken.slice(0, 12)}...` : null,
+    refreshTokenPreview: payload.refreshToken ? `${payload.refreshToken.slice(0, 12)}...` : null,
+  });
+
   window.localStorage.setItem('authToken', payload.accessToken);
   window.localStorage.setItem('refreshToken', payload.refreshToken);
+
   if (payload.tokenType) {
     window.localStorage.setItem('authTokenType', payload.tokenType);
   }
+
   if (payload.expiresIn && Number.isFinite(payload.expiresIn)) {
-    window.localStorage.setItem('authTokenExpiresAt', (Date.now() + payload.expiresIn * 1000).toString());
+    window.localStorage.setItem(
+      'authTokenExpiresAt',
+      (Date.now() + payload.expiresIn * 1000).toString(),
+    );
   }
+
+  // DO NOT set apiClient.defaults.headers here
+  // Interceptor is the single source of truth
 };
 
 const refreshAuthToken = async (): Promise<string> => {
   const refreshToken = getStoredRefreshToken();
   const deviceId = getDeviceId();
+
+  console.log('[refreshAuthToken] DeviceId resolved for refresh:', deviceId);
+  console.log('[refreshAuthToken] Request payload:', {
+    deviceId,
+    refreshTokenPreview: refreshToken ? `${refreshToken.slice(0, 8)}...` : null,
+  });
 
   if (!refreshToken || !deviceId) {
     throw new Error('Missing refresh credentials');
@@ -74,6 +92,8 @@ const refreshAuthToken = async (): Promise<string> => {
     refreshToken,
     deviceId,
   });
+
+  console.log('[refreshAuthToken] Response data:', response.data);
 
   storeAuthTokens(response.data);
   return response.data.accessToken;
@@ -121,9 +141,11 @@ apiClient.interceptors.response.use(
       try {
         const newToken = await refreshPromise;
         processQueue(null, newToken);
+
         const headers = AxiosHeaders.from(originalRequest.headers ?? {});
         headers.set('Authorization', `Bearer ${newToken}`);
         originalRequest.headers = headers;
+
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
@@ -151,6 +173,7 @@ apiClient.interceptors.response.use(
 );
 
 export const isAxiosAuthError = (error: unknown): error is AxiosError => isAxiosError(error);
+
 export const clearApiAuthorizationHeader = () => {
   delete apiClient.defaults.headers.common.Authorization;
 };

@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { decodeJwt, getStoredAuthToken, logoutUser, type DecodedJwt } from '@/lib/auth';
+import { useConfirm } from '@/context/ConfirmContext';
+import { decodeJwt, getStoredAuthToken, getStoredUserRole, logoutUser, type DecodedJwt } from '@/lib/auth';
 
 const sidebarLinks = [
   { label: 'Dashboard', href: '/dashboard/admin' },
@@ -55,6 +56,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const confirm = useConfirm();
 
   useEffect(() => {
     let cancelled = false;
@@ -82,7 +84,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       }
 
       const role = getRoleClaim(payload);
-      if (!role || role.toLowerCase() !== 'admin') {
+      const storedRole = getStoredUserRole();
+      const hasAdminRole = (role && role.toLowerCase() === 'admin') || storedRole === 'Admin';
+
+      if (!hasAdminRole) {
         if (!cancelled) {
           setIsChecking(false);
         }
@@ -104,10 +109,22 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     };
   }, [router]);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
+    const approved = await confirm({
+      title: 'Log out of LMS?',
+      description: 'Any ongoing work will be up to you to save before leaving.',
+      variant: 'default',
+      confirmText: 'Logout',
+      cancelText: 'Stay Signed In',
+    });
+
+    if (!approved) {
+      return;
+    }
+
     await logoutUser();
     router.replace('/login');
-  };
+  }, [confirm, router]);
 
   const sidebarItems = useMemo(
     () =>

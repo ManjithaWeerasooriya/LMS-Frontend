@@ -1,4 +1,6 @@
-const BASE_URL = 'http://localhost:5251' as const;
+import { API_BASE_URL } from '@/lib/api';
+
+const BASE_URL = API_BASE_URL;
 
 const endpoints = {
   auth: {

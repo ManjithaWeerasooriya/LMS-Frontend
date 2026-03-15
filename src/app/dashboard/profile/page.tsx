@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -248,6 +249,24 @@ function ProfileContent() {
               </button>
               {resetMessage ? <p className="text-sm text-slate-600">{resetMessage}</p> : null}
             </div>
+          </section>
+
+          <section className="rounded-3xl border border-rose-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-rose-700">Delete Account</h2>
+                <p className="text-sm text-slate-500">Permanently remove your account and associated data.</p>
+              </div>
+              <Link
+                href="/dashboard/profile/delete-account"
+                className="rounded-2xl border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:border-rose-400 hover:bg-rose-50"
+              >
+                Go to Delete Account
+              </Link>
+            </div>
+            <p className="mt-4 text-sm text-slate-500">
+              Account deletion requires email confirmation. You will receive instructions after submitting the request.
+            </p>
           </section>
         </section>
       )}
