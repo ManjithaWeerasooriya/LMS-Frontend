@@ -315,6 +315,12 @@ export async function logoutUser(): Promise<void> {
     console.warn('[logoutUser] Failed to log out cleanly.', error);
   } finally {
     clearStoredAuth();
+    try {
+      const { clearApiAuthorizationHeader } = await import('@/lib/http');
+      clearApiAuthorizationHeader();
+    } catch (error) {
+      console.warn('[logoutUser] Failed to reset API auth header.', error);
+    }
   }
 }
 
