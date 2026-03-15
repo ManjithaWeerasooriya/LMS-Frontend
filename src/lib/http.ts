@@ -1,7 +1,13 @@
 import axios, { AxiosHeaders, isAxiosError, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
 import { apiConfig } from '@/lib/config';
-import { clearStoredAuth, getStoredAuthToken, getStoredRefreshToken } from '@/lib/auth';
+import {
+  clearStoredAuth,
+  decodeJwt,
+  decodeJwtHeader,
+  getStoredAuthToken,
+  getStoredRefreshToken,
+} from '@/lib/auth';
 import { getDeviceId } from '@/lib/device';
 
 type RefreshResponse = {
@@ -48,12 +54,36 @@ const redirectToLogin = () => {
   }
 };
 
+const formatJwtPreview = (token?: string | null) => (token ? `${token.slice(0, 25)}...` : null);
+
+const logTokenDetails = (label: string, token: string) => {
+  const header = decodeJwtHeader(token);
+  const payload = decodeJwt(token);
+  console.log(`[${label}] accessToken (raw):`, token);
+  console.log(`[${label}] header:`, header);
+  console.log(`[${label}] payload:`, payload);
+  console.log(`[${label}] summary:`, {
+    alg: header?.alg ?? null,
+    kid: header?.kid ?? null,
+    sub: payload?.sub ?? null,
+    role: payload?.role ?? null,
+    iss: payload?.iss ?? null,
+    aud: payload?.aud ?? null,
+    exp: payload?.exp ?? null,
+    length: token.length,
+  });
+};
+
 const storeAuthTokens = (payload: RefreshResponse) => {
   if (typeof window === 'undefined') return;
 
+  if (payload.accessToken) {
+    logTokenDetails('refreshAuthToken', payload.accessToken);
+  }
+
   console.log('[refreshAuthToken] Replacing tokens in storage:', {
-    accessTokenPreview: payload.accessToken ? `${payload.accessToken.slice(0, 12)}...` : null,
-    refreshTokenPreview: payload.refreshToken ? `${payload.refreshToken.slice(0, 12)}...` : null,
+    accessTokenPreview: formatJwtPreview(payload.accessToken),
+    refreshTokenPreview: formatJwtPreview(payload.refreshToken),
   });
 
   window.localStorage.setItem('authToken', payload.accessToken);
@@ -111,7 +141,14 @@ apiClient.interceptors.request.use((config) => {
     headers.delete('Authorization');
   }
 
-  console.log('[apiClient] attaching Authorization header:', headers.get('Authorization') ?? 'none');
+  const rawAuthorization = headers.get('Authorization');
+  const authPreview = rawAuthorization ? `${rawAuthorization.slice(0, 35)}...` : 'none';
+  const requestUrl =
+    config.baseURL && config.url && !config.url.startsWith('http')
+      ? `${config.baseURL}${config.url}`
+      : config.url ?? '(unknown URL)';
+
+  console.log('[apiClient] attaching Authorization header:', authPreview, '→', requestUrl);
 
   config.headers = headers;
   return config;
