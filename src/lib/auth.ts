@@ -32,6 +32,13 @@ export type DecodedJwt = {
   [key: string]: unknown;
 };
 
+export type DecodedJwtHeader = {
+  alg?: string;
+  kid?: string;
+  typ?: string;
+  [key: string]: unknown;
+};
+
 export interface LoginParams {
   email: string;
   password: string;
@@ -56,23 +63,6 @@ type ApiLoginResponse = {
 };
 
 const DEFAULT_TOKEN_TYPE = 'Bearer';
-const ADMIN_STUB_JWT =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdHViLWFkbWluIiwicm9sZSI6ImFkbWluIiwiZXhwIjo0MTAyNDQ0ODAwLCJlbWFpbCI6ImFkbWluQGxtcy5sb2NhbCJ9.stub-signature';
-const ADMIN_STUB_REFRESH = 'stub-admin-refresh-token';
-const ADMIN_STUB_EXPIRY_SECONDS = 60 * 60;
-
-const isAdminStubEnabled = (): boolean => {
-  if (process.env.NEXT_PUBLIC_DISABLE_ADMIN_STUB === 'true') {
-    return false;
-  }
-  if (process.env.NEXT_PUBLIC_ENABLE_ADMIN_STUB === 'true') {
-    return true;
-  }
-  return true;
-};
-
-const getAdminStubEmail = () => (process.env.NEXT_PUBLIC_ADMIN_STUB_EMAIL ?? 'admin@lms.local').trim().toLowerCase();
-const getAdminStubPassword = () => process.env.NEXT_PUBLIC_ADMIN_STUB_PASSWORD ?? 'Admin123!';
 
 function normalizeRole(role?: string | null): UserRole | undefined {
   if (!role) return undefined;
@@ -111,10 +101,7 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
   const envBase = process.env.NEXT_PUBLIC_API_URL?.trim();
   const apiBase = (envBase && envBase.length > 0 ? envBase : BASE_URL)?.trim();
 
-  const maybeStub = tryAdminStubLogin(email, password);
-  if (maybeStub) {
-    return maybeStub;
-  }
+  console.log('[loginUser] Resolved API base:', apiBase || '(undefined)');
 
   if (!apiBase) {
     throw new LoginError('API base URL is not configured.');
@@ -131,6 +118,7 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
   const requestBody = { email, password, deviceId };
 
   try {
+    console.log('[loginUser] Sending POST to:', loginUrl);
     const { data } = await axios.post<ApiLoginResponse>(loginUrl, requestBody, {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -143,7 +131,29 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
     const expiresIn = typeof data.expiresIn === 'number' && Number.isFinite(data.expiresIn) ? data.expiresIn : 0;
     const normalizedRole = normalizeRole(data.user?.role);
 
+    const decoded = decodeJwt(data.accessToken);
+    const decodedHeader = decodeJwtHeader(data.accessToken);
+    console.log('[loginUser] accessToken (raw):', data.accessToken);
+    console.log('[loginUser] Received tokens:', {
+      accessTokenPreview: `${data.accessToken.slice(0, 20)}...`,
+      refreshTokenPreview: `${data.refreshToken.slice(0, 20)}...`,
+    });
+    console.log('[loginUser] accessToken header:', decodedHeader);
+    console.log('[loginUser] Decoded access token claims:', {
+      iss: decoded?.iss ?? null,
+      aud: decoded?.aud ?? null,
+      exp: decoded?.exp ?? null,
+      sub: decoded?.sub ?? null,
+    });
+    console.log('[loginUser] accessToken summary:', {
+      alg: decodedHeader?.alg ?? null,
+      kid: decodedHeader?.kid ?? null,
+      length: data.accessToken.length,
+    });
+    console.log('[loginUser] accessToken payload:', decoded);
+
     if (typeof window !== 'undefined') {
+      console.log('[loginUser] Persisting tokens to storage');
       localStorage.setItem('authToken', data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
       localStorage.setItem('authTokenType', tokenType);
@@ -184,39 +194,8 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
 
     if (error instanceof LoginError) throw error;
 
-    const stubFallback = tryAdminStubLogin(email, password);
-    if (stubFallback) {
-      return stubFallback;
-    }
-
     throw new LoginError('Something went wrong. Please check your connection and try again.');
   }
-}
-
-function tryAdminStubLogin(email: string, password: string): LoginResult | null {
-  if (!isAdminStubEnabled()) {
-    return null;
-  }
-
-  const normalizedEmail = email.trim().toLowerCase();
-  if (normalizedEmail !== getAdminStubEmail() || password !== getAdminStubPassword()) {
-    return null;
-  }
-
-  const stubResult: LoginResult = {
-    accessToken: ADMIN_STUB_JWT,
-    refreshToken: ADMIN_STUB_REFRESH,
-    expiresIn: ADMIN_STUB_EXPIRY_SECONDS,
-    tokenType: DEFAULT_TOKEN_TYPE,
-    role: 'Admin',
-  };
-
-  persistStubTokens(stubResult);
-  return stubResult;
-}
-
-export function ensureAdminStubSession(email: string, password: string): LoginResult | null {
-  return tryAdminStubLogin(email, password);
 }
 
 const AUTH_STORAGE_KEYS = ['authToken', 'refreshToken', 'authTokenType', 'authTokenExpiresAt', 'userRole'] as const;
@@ -242,17 +221,6 @@ export function getStoredUserRole(): UserRole | null {
 export function clearStoredAuth(): void {
   if (typeof window === 'undefined') return;
   AUTH_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key));
-}
-
-function persistStubTokens(payload: LoginResult): void {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('authToken', payload.accessToken);
-  window.localStorage.setItem('refreshToken', payload.refreshToken);
-  window.localStorage.setItem('authTokenType', payload.tokenType);
-  window.localStorage.setItem('userRole', payload.role ?? '');
-  if (payload.expiresIn && Number.isFinite(payload.expiresIn)) {
-    window.localStorage.setItem('authTokenExpiresAt', (Date.now() + payload.expiresIn * 1000).toString());
-  }
 }
 
 function decodeBase64Url(input: string): string {
@@ -283,6 +251,19 @@ export function decodeJwt(token: string | null | undefined): DecodedJwt | null {
     if (!payload) return null;
     const decoded = decodeBase64Url(payload);
     return JSON.parse(decoded) as DecodedJwt;
+  } catch {
+    return null;
+  }
+}
+
+export function decodeJwtHeader(token: string | null | undefined): DecodedJwtHeader | null {
+  if (!token) return null;
+
+  try {
+    const [header] = token.split('.');
+    if (!header) return null;
+    const decoded = decodeBase64Url(header);
+    return JSON.parse(decoded) as DecodedJwtHeader;
   } catch {
     return null;
   }

@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { ErrorAlert } from '@/components/ErrorAlert';
 import { FormInput } from '@/components/auth/FormInput';
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
-import { ensureAdminStubSession, LoginError, loginUser, type UserRole } from '@/lib/auth';
+import { LoginError, loginUser, type UserRole } from '@/lib/auth';
 
 type FieldErrors = Partial<Record<'email' | 'password', string>>;
 
@@ -71,12 +71,6 @@ export function LoginForm() {
       };
       router.push(role ? redirectMap[role] ?? '/dashboard' : '/dashboard');
     } catch (error) {
-      const stubResult = ensureAdminStubSession(email, password);
-      if (stubResult?.role === 'Admin') {
-        router.push('/dashboard/admin');
-        return;
-      }
-
       if (error instanceof LoginError) {
         setFormError(error.message);
       } else {
