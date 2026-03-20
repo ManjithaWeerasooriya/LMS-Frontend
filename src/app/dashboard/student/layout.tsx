@@ -205,7 +205,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-screen bg-slate-100">
       {/* Sidebar */}
-      <aside className="hidden h-full w-64 flex-shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white px-4 py-6 text-slate-900 md:flex">
+      <aside className="hidden h-full w-64 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white px-4 py-6 text-slate-900 md:flex">
         <div className="flex items-center gap-3 px-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#1B3B8B] text-white">
             <span className="text-lg font-semibold">GE</span>
@@ -285,7 +285,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                 <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
-              <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[0.6rem] font-semibold text-white">
+              <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[0.6rem] font-semibold text-white">
                 3
               </span>
             </button>
@@ -299,7 +299,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                   .join('')}
               </div>
               <div className="hidden text-left text-xs leading-tight md:block">
-                <p className="max-w-[10rem] truncate font-semibold text-slate-900">
+                <p className="max-w-40 truncate font-semibold text-slate-900">
                   {studentName}
                 </p>
                 <p className="text-[0.7rem] text-slate-500">Student</p>

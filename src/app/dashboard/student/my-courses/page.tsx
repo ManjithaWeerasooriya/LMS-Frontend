@@ -161,7 +161,7 @@ export default function MyCoursesPage() {
                   </div>
 
                   <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-                    <span className="inline-flex items-center gap-1">
+                <span className="inline-flex items-center gap-1">
                       <svg
                         width="14"
                         height="14"
@@ -180,7 +180,7 @@ export default function MyCoursesPage() {
                       {course.studentsEnrolled} students
                     </span>
                     <span className="text-sm font-semibold text-slate-900">
-                      ${course.price.toFixed(2)}
+                      Rs. {course.price.toFixed(2)}
                     </span>
                   </div>
 
@@ -209,4 +209,3 @@ export default function MyCoursesPage() {
     </div>
   );
 }
-
