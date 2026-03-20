@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { useConfirm } from '@/context/ConfirmContext';
 import {
   enrollInCourse,
   getAvailableStudentCourses,
@@ -14,6 +15,7 @@ export default function MyCoursesPage() {
   const [loading, setLoading] = useState(true);
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   const loadCourses = async (searchTerm?: string) => {
     try {
@@ -38,6 +40,22 @@ export default function MyCoursesPage() {
   };
 
   const handleEnrollClick = async (courseId: string) => {
+    const course = courses.find((item) => item.id === courseId);
+
+    const approved = await confirm({
+      title: 'Enroll in this course?',
+      description: course
+        ? `You are about to enroll in "${course.title}".`
+        : 'You are about to enroll in this course.',
+      variant: 'default',
+      confirmText: 'Enroll',
+      cancelText: 'Cancel',
+    });
+
+    if (!approved) {
+      return;
+    }
+
     try {
       setEnrollingId(courseId);
       setError(null);
