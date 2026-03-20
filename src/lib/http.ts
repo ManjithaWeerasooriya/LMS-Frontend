@@ -23,12 +23,15 @@ interface RefreshableRequestConfig extends InternalAxiosRequestConfig {
 
 const { BASE_URL, endpoints } = apiConfig;
 
+const envBaseUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+const resolvedBaseUrl = (envBaseUrl && envBaseUrl.length > 0 ? envBaseUrl : BASE_URL)?.replace(/\/+$/, '') ?? BASE_URL;
+
 const apiClient = axios.create({
-  baseURL: BASE_URL,
+  baseURL: resolvedBaseUrl,
 });
 
 const refreshClient = axios.create({
-  baseURL: BASE_URL,
+  baseURL: resolvedBaseUrl,
 });
 
 let isRefreshing = false;
@@ -100,8 +103,12 @@ const storeAuthTokens = (payload: RefreshResponse) => {
     );
   }
 
-  // DO NOT set apiClient.defaults.headers here
-  // Interceptor is the single source of truth
+  if (payload.accessToken) {
+    const bearer = `Bearer ${payload.accessToken}`;
+    apiClient.defaults.headers.common.Authorization = bearer;
+    refreshClient.defaults.headers.common.Authorization = bearer;
+    console.log('[refreshAuthToken] Updated axios default Authorization header.');
+  }
 };
 
 const refreshAuthToken = async (): Promise<string> => {
@@ -165,9 +172,15 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as RefreshableRequestConfig | undefined;
 
-    if (!originalRequest || error.response?.status !== 401) {
+    if (!originalRequest) {
       return Promise.reject(error);
     }
+
+    if (error.response?.status !== 401) {
+      return Promise.reject(error);
+    }
+
+    console.log('[apiClient] 401 detected, attempting refresh...', originalRequest.url);
 
     if (originalRequest._retry || originalRequest.url?.includes(endpoints.auth.refresh)) {
       clearStoredAuth();
@@ -188,9 +201,11 @@ apiClient.interceptors.response.use(
         const headers = AxiosHeaders.from(originalRequest.headers ?? {});
         headers.set('Authorization', `Bearer ${newToken}`);
         originalRequest.headers = headers;
+        console.log('[apiClient] Refresh success, retrying request...');
 
         return apiClient(originalRequest);
       } catch (refreshError) {
+        console.warn('[apiClient] Refresh failed, logging out...', refreshError);
         processQueue(refreshError, null);
         clearStoredAuth();
         redirectToLogin();
