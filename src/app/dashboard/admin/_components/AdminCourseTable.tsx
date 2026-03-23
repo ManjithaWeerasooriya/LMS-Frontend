@@ -1,9 +1,9 @@
 'use client';
 
-import type { AdminCourseRecord } from '@/lib/admin';
+import type { AdminCourse } from '@/lib/admin';
 
 type AdminCourseTableProps = {
-  courses: AdminCourseRecord[];
+  items: AdminCourse[];
   loading: boolean;
   error?: string | null;
   actionState: { courseId: string; type: 'disable' | 'delete' } | null;
@@ -30,7 +30,7 @@ const formatDate = (value: string) => {
 };
 
 export function AdminCourseTable({
-  courses,
+  items,
   loading,
   error,
   actionState,
@@ -64,32 +64,43 @@ export function AdminCourseTable({
                   {error}
                 </td>
               </tr>
-            ) : courses.length === 0 ? (
+            ) : items.length === 0 ? (
               <tr>
                 <td className="px-6 py-6 text-center text-slate-500" colSpan={6}>
                   No courses match the current filters.
                 </td>
               </tr>
             ) : (
-              courses.map((course) => {
+              items.map((course) => {
                 const normalizedStatus = course.status?.toLowerCase?.() ?? '';
                 const pillClass = statusClasses[normalizedStatus] ?? 'bg-slate-100 text-slate-600';
                 const disableBusy = actionState?.courseId === course.id && actionState.type === 'disable';
                 const deleteBusy = actionState?.courseId === course.id && actionState.type === 'delete';
                 const disableDisabled = normalizedStatus === 'disabled' || normalizedStatus === 'archived' || disableBusy;
+                const enrollmentDisplay =
+                  typeof course.enrollmentCount === 'number'
+                    ? course.enrollmentCount.toLocaleString()
+                    : '—';
 
                 return (
                   <tr key={course.id} className="hover:bg-slate-50/80">
                     <td className="px-6 py-4">
                       <p className="font-semibold text-slate-900">{course.title}</p>
                     </td>
-                    <td className="px-6 py-4 text-slate-700">{course.teacherName}</td>
+                    <td className="px-6 py-4 text-slate-700">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-slate-900">{course.teacherName ?? '—'}</span>
+                        {course.teacherEmail ? (
+                          <span className="text-xs text-slate-500">{course.teacherEmail}</span>
+                        ) : null}
+                      </div>
+                    </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${pillClass}`}>
                         {course.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-700">{course.enrollmentCount.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-slate-700">{enrollmentDisplay}</td>
                     <td className="px-6 py-4 text-slate-700">{formatDate(course.createdAt)}</td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-2">

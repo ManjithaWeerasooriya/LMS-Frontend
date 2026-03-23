@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { AdminApiError, getAdminUsers } from '@/lib/admin';
+import { AdminApiError, getAdminCourses, getAdminUsers } from '@/lib/admin';
 import { logoutUser } from '@/lib/auth';
 
 type CardState = {
@@ -18,18 +18,26 @@ export default function AdminDashboardPage() {
   const [totalUsers, setTotalUsers] = useState<number | null>(null);
   const [totalUsersError, setTotalUsersError] = useState<string | null>(null);
   const [isLoadingTotalUsers, setIsLoadingTotalUsers] = useState(true);
+  const [totalCourses, setTotalCourses] = useState<number | null>(null);
+  const [totalCoursesError, setTotalCoursesError] = useState<string | null>(null);
+  const [isLoadingTotalCourses, setIsLoadingTotalCourses] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchTotals = async () => {
       try {
-        const response = await getAdminUsers({ pageNumber: 1, pageSize: 1 });
+        const [usersResponse, coursesResponse] = await Promise.all([
+          getAdminUsers({ pageNumber: 1, pageSize: 1 }),
+          getAdminCourses({ pageNumber: 1, pageSize: 1 }),
+        ]);
         if (!isMounted) {
           return;
         }
-        setTotalUsers(response.totalCount ?? 0);
+        setTotalUsers(usersResponse.totalCount ?? 0);
+        setTotalCourses(coursesResponse.totalCount ?? 0);
         setTotalUsersError(null);
+        setTotalCoursesError(null);
       } catch (error) {
         if (!isMounted) {
           return;
@@ -41,12 +49,15 @@ export default function AdminDashboardPage() {
             return;
           }
           setTotalUsersError('Unable to load');
+          setTotalCoursesError('Unable to load');
         } else {
           setTotalUsersError('Unable to load');
+          setTotalCoursesError('Unable to load');
         }
       } finally {
         if (isMounted) {
           setIsLoadingTotalUsers(false);
+          setIsLoadingTotalCourses(false);
         }
       }
     };
@@ -67,7 +78,9 @@ export default function AdminDashboardPage() {
     },
     {
       title: 'Total Courses',
-      value: 0,
+      value: totalCourses,
+      loading: isLoadingTotalCourses,
+      error: totalCoursesError,
     },
     {
       title: 'Active Live Sessions',

@@ -10,8 +10,8 @@ type AdminCoursesReportProps = {
 
 export function AdminCoursesReport({ report, loading, error }: AdminCoursesReportProps) {
   const courses = report?.courses ?? [];
-  const activeCount = courses.filter((item) => item.status.toLowerCase() === 'active').length;
-  const archivedCount = courses.filter((item) => item.status.toLowerCase() === 'archived').length;
+  const activeCount = courses.filter((item) => item.status?.toLowerCase?.() === 'active').length;
+  const archivedCount = courses.filter((item) => item.status?.toLowerCase?.() === 'archived').length;
 
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
