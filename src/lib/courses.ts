@@ -1,51 +1,3 @@
-<<<<<<< Updated upstream
-const API_BASE = process.env.NEXT_PUBLIC_API_URL;
-
-// ✅ Define type
-export type Course = {
-  id: string;
-  title: string;
-  description?: string;
-  category?: string;
-  price: number;
-  durationHours: number;
-  teacherName?: string;
-};
-
-// ✅ Get all courses
-export async function getCourses(search?: string): Promise<Course[]> {
-  const url = search
-    ? `${API_BASE}/api/public/courses?search=${encodeURIComponent(search)}`
-    : `${API_BASE}/api/public/courses`;
-
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-
-    if (!res.ok) return [];
-
-    const data = await res.json();
-    return data as Course[];
-  } catch {
-    return [];
-  }
-}
-
-// ✅ Get single course
-export async function getCourseById(id: string): Promise<Course | null> {
-  try {
-    const res = await fetch(`${API_BASE}/api/public/courses/${id}`, {
-      cache: "no-store",
-    });
-
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    return data as Course;
-  } catch {
-    return null;
-  }
-}
-=======
 export type Course = {
   id: string;
   title: string;
@@ -60,35 +12,35 @@ type CourseRecord = Partial<Course> & {
   id?: string | number;
 };
 
-const DEFAULT_LOCAL_API_URL = 'http://localhost:5251';
+const DEFAULT_LOCAL_API_URL = "http://localhost:5251";
 
 const fallbackCourses: Course[] = [
   {
-    id: 'general-english-foundations',
-    title: 'General English Foundations',
-    description: 'Build confidence in grammar, vocabulary, reading, and everyday communication.',
-    category: 'General English',
+    id: "general-english-foundations",
+    title: "General English Foundations",
+    description: "Build confidence in grammar, vocabulary, reading, and everyday communication.",
+    category: "General English",
     price: 49,
     durationHours: 24,
-    teacherName: 'Genuine English',
+    teacherName: "Genuine English",
   },
   {
-    id: 'ielts-speaking-essentials',
-    title: 'IELTS Speaking Essentials',
-    description: 'Practice structured speaking tasks with guided feedback and exam-focused drills.',
-    category: 'IELTS',
+    id: "ielts-speaking-essentials",
+    title: "IELTS Speaking Essentials",
+    description: "Practice structured speaking tasks with guided feedback and exam-focused drills.",
+    category: "IELTS",
     price: 79,
     durationHours: 18,
-    teacherName: 'Genuine English',
+    teacherName: "Genuine English",
   },
   {
-    id: 'academic-writing-bootcamp',
-    title: 'Academic Writing Bootcamp',
-    description: 'Learn paragraph structure, essay flow, and formal writing for higher education.',
-    category: 'Writing',
+    id: "academic-writing-bootcamp",
+    title: "Academic Writing Bootcamp",
+    description: "Learn paragraph structure, essay flow, and formal writing for higher education.",
+    category: "Writing",
     price: 69,
     durationHours: 20,
-    teacherName: 'Genuine English',
+    teacherName: "Genuine English",
   },
 ];
 
@@ -96,10 +48,10 @@ function resolvePublicApiUrl(): string | null {
   const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
 
   if (envUrl) {
-    return envUrl.replace(/\/+$/, '');
+    return envUrl.replace(/\/+$/, "");
   }
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== "production") {
     return DEFAULT_LOCAL_API_URL;
   }
 
@@ -110,7 +62,7 @@ function normalizeCourse(input: CourseRecord): Course | null {
   const id = input.id;
   const title = input.title;
 
-  if ((typeof id !== 'string' && typeof id !== 'number') || typeof title !== 'string') {
+  if ((typeof id !== "string" && typeof id !== "number") || typeof title !== "string") {
     return null;
   }
 
@@ -118,24 +70,24 @@ function normalizeCourse(input: CourseRecord): Course | null {
     id: String(id),
     title,
     description:
-      typeof input.description === 'string' && input.description.trim()
+      typeof input.description === "string" && input.description.trim()
         ? input.description
-        : 'Course description will be available soon.',
+        : "Course description will be available soon.",
     category:
-      typeof input.category === 'string' && input.category.trim()
+      typeof input.category === "string" && input.category.trim()
         ? input.category
-        : 'Uncategorized',
-    price: typeof input.price === 'number' ? input.price : 0,
+        : "Uncategorized",
+    price: typeof input.price === "number" ? input.price : 0,
     durationHours:
-      typeof input.durationHours === 'number'
+      typeof input.durationHours === "number"
         ? input.durationHours
-        : typeof input.durationHours === 'string'
+        : typeof input.durationHours === "string"
           ? Number(input.durationHours) || 0
           : 0,
     teacherName:
-      typeof input.teacherName === 'string' && input.teacherName.trim()
+      typeof input.teacherName === "string" && input.teacherName.trim()
         ? input.teacherName
-        : 'Genuine English',
+        : "Genuine English",
   };
 }
 
@@ -148,7 +100,7 @@ function filterCourses(courses: Course[], search?: string): Course[] {
 
   return courses.filter((course) =>
     [course.title, course.description, course.category, course.teacherName]
-      .join(' ')
+      .join(" ")
       .toLowerCase()
       .includes(term),
   );
@@ -195,4 +147,3 @@ export async function getCourseById(id: string): Promise<Course | null> {
   const courses = await getCourses();
   return courses.find((course) => course.id === id) ?? null;
 }
->>>>>>> Stashed changes
