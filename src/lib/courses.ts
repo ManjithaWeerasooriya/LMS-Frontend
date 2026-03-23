@@ -1,23 +1,46 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
-export async function getCourses(search?: string) {
+// ✅ Define type
+export type Course = {
+  id: string;
+  title: string;
+  description?: string;
+  category?: string;
+  price: number;
+  durationHours: number;
+  teacherName?: string;
+};
+
+// ✅ Get all courses
+export async function getCourses(search?: string): Promise<Course[]> {
   const url = search
     ? `${API_BASE}/api/public/courses?search=${encodeURIComponent(search)}`
     : `${API_BASE}/api/public/courses`;
 
-  const res = await fetch(url, { cache: "no-store" });
+  try {
+    const res = await fetch(url, { cache: "no-store" });
 
-  if (!res.ok) return [];
+    if (!res.ok) return [];
 
-  return res.json();
+    const data = await res.json();
+    return data as Course[];
+  } catch {
+    return [];
+  }
 }
 
-export async function getCourseById(id: string) {
-  const res = await fetch(`${API_BASE}/api/public/courses/${id}`, {
-    cache: "no-store",
-  });
+// ✅ Get single course
+export async function getCourseById(id: string): Promise<Course | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/public/courses/${id}`, {
+      cache: "no-store",
+    });
 
-  if (!res.ok) return null;
+    if (!res.ok) return null;
 
-  return res.json();
+    const data = await res.json();
+    return data as Course;
+  } catch {
+    return null;
+  }
 }
