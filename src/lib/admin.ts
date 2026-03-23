@@ -27,6 +27,61 @@ export type AdminUserQuery = {
   status?: AdminUserStatus;
 };
 
+export type AdminCourseRecord = {
+  id: string;
+  title: string;
+  teacherName: string;
+  status: string;
+  enrollmentCount: number;
+  createdAt: string;
+};
+
+export type AdminCourseQuery = {
+  pageNumber?: number;
+  pageSize?: number;
+  teacherId?: string;
+  status?: string;
+  search?: string;
+};
+
+export type AdminCourseListResponse = {
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  courses: AdminCourseRecord[];
+};
+
+export type AdminOverviewReport = {
+  totalUsers: number;
+  totalCourses: number;
+  totalEnrollments: number;
+  completionRate: number;
+};
+
+export type AdminCourseReportItem = {
+  courseId: string;
+  courseTitle: string;
+  teacherName?: string | null;
+  enrollmentCount: number;
+  completionRate: number;
+  status: string;
+};
+
+export type AdminCoursesReportResponse = {
+  courses: AdminCourseReportItem[];
+};
+
+export type AdminQuizPerformanceBand = {
+  label: string;
+  percentage: number;
+};
+
+export type AdminQuizReportSummary = {
+  averageScore: number;
+  passRate: number;
+  performanceBands: AdminQuizPerformanceBand[];
+};
+
 export class AdminApiError extends Error {
   public status: number;
 
@@ -56,6 +111,60 @@ export async function getAdminUsers(query: AdminUserQuery): Promise<AdminUserLis
   const search = params.toString();
   try {
     const { data } = await apiClient.get<AdminUserListResponse>(`${ADMIN_BASE}/users${search ? `?${search}` : ''}`);
+    return data;
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
+}
+
+export async function getAdminCourses(query: AdminCourseQuery = {}): Promise<AdminCourseListResponse> {
+  try {
+    const { data } = await apiClient.get<AdminCourseListResponse>(`${ADMIN_BASE}/courses`, {
+      params: query,
+    });
+    return data;
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
+}
+
+export async function disableCourseAdmin(courseId: string): Promise<void> {
+  try {
+    await apiClient.put(`${ADMIN_BASE}/courses/${courseId}/disable`, {});
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
+}
+
+export async function deleteCourseAdmin(courseId: string): Promise<void> {
+  try {
+    await apiClient.delete(`${ADMIN_BASE}/courses/${courseId}`);
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
+}
+
+export async function getAdminOverviewReport(): Promise<AdminOverviewReport> {
+  try {
+    const { data } = await apiClient.get<AdminOverviewReport>(`${ADMIN_BASE}/reports/overview`);
+    return data;
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
+}
+
+export async function getAdminCoursesReport(): Promise<AdminCoursesReportResponse> {
+  try {
+    const { data } = await apiClient.get<AdminCoursesReportResponse>(`${ADMIN_BASE}/reports/courses`);
+    return data;
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
+}
+
+export async function getAdminQuizReport(): Promise<AdminQuizReportSummary> {
+  try {
+    const { data } = await apiClient.get<AdminQuizReportSummary>(`${ADMIN_BASE}/reports/quizzes`);
     return data;
   } catch (error) {
     throw convertAxiosError(error);
