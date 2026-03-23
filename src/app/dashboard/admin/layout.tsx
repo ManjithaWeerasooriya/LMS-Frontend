@@ -10,8 +10,8 @@ import { decodeJwt, getStoredAuthToken, getStoredUserRole, logoutUser, type Deco
 const sidebarLinks = [
   { label: 'Dashboard', href: '/dashboard/admin' },
   { label: 'Users', href: '/dashboard/admin/users' },
-  { label: 'Courses', href: '/dashboard/admin/courses', disabled: true },
-  { label: 'Reports', href: '/dashboard/admin/reports', disabled: true },
+  { label: 'Courses', href: '/dashboard/admin/courses', disabled: false },
+  { label: 'Reports', href: '/dashboard/admin/reports', disabled: false },
   { label: 'Live Sessions', href: '/dashboard/admin/live-sessions', disabled: true },
   { label: 'Store', href: '/dashboard/admin/store', disabled: true },
   { label: 'Settings', href: '/dashboard/admin/settings', disabled: true },
@@ -184,7 +184,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-slate-100">
-      <aside className="flex h-screen w-64 flex-col justify-between bg-[#1f2a44] px-5 py-6 text-white">
+      <aside className="flex min-h-screen w-64 flex-col justify-between bg-[#1f2a44] px-5 py-6 text-white">
         <div className="space-y-6">
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-blue-200">Genuine English</p>
