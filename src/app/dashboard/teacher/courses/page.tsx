@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { Edit3, Trash2 } from 'lucide-react';
+import { Edit3, MessageCircle, Trash2 } from 'lucide-react';
 
 import { useConfirm } from '@/context/ConfirmContext';
 import {
@@ -246,6 +247,13 @@ export default function TeacherCoursesPage() {
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
+                            <Link
+                              href={`/dashboard/teacher/courses/${course.id}/discussions`}
+                              className="inline-flex h-8 items-center justify-center rounded-2xl border border-slate-200 px-3 text-xs font-semibold text-blue-700 transition hover:bg-slate-50"
+                            >
+                              <MessageCircle className="mr-1 h-3 w-3" />
+                              Discussion
+                            </Link>
                           </div>
                         </td>
                       </tr>

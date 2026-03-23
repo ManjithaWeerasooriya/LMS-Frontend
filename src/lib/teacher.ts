@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/http';
+import type { CourseDiscussionMessage } from '@/lib/student';
 
 // Types mirroring the backend DTOs (simplified to what the UI needs).
 
@@ -317,4 +318,34 @@ export async function createQuiz(input: CreateQuizInput): Promise<void> {
   };
 
   await apiClient.post('/api/v1/teacher/quizzes', payload);
+}
+
+export async function getTeacherCourseDiscussion(
+  courseId: string,
+): Promise<CourseDiscussionMessage[]> {
+  const { data } = await apiClient.get<CourseDiscussionMessage[]>(
+    `/api/v1/teacher/courses/${courseId}/discussions`,
+  );
+  return data;
+}
+
+export async function postTeacherCourseDiscussionMessage(
+  courseId: string,
+  content: string,
+  parentMessageId?: string,
+): Promise<CourseDiscussionMessage> {
+  const payload: { content: string; parentMessageId?: string | null } = {
+    content,
+  };
+
+  if (parentMessageId) {
+    payload.parentMessageId = parentMessageId;
+  }
+
+  const { data } = await apiClient.post<CourseDiscussionMessage>(
+    `/api/v1/teacher/courses/${courseId}/discussions`,
+    payload,
+  );
+
+  return data;
 }
