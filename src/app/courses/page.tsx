@@ -1,4 +1,4 @@
-import { getCourses } from "@/lib/courses";
+import { Course, getCourses } from "@/lib/courses";
 import Link from "next/link";
 
 export default async function CoursesPage({
@@ -10,26 +10,24 @@ export default async function CoursesPage({
   const courses = await getCourses(search);
 
   return (
-    <main className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Courses</h1>
+    <main className="mx-auto max-w-5xl p-6">
+      <h1 className="mb-6 text-3xl font-bold">Courses</h1>
 
-      {/* Search */}
       <form className="mb-6">
         <input
           name="search"
           defaultValue={search}
           placeholder="Search courses..."
-          className="border p-2 w-full rounded"
+          className="w-full rounded border p-2"
         />
       </form>
 
-      {/* List */}
       <div className="grid gap-4">
-        {courses.map((course: any) => (
+        {courses.map((course: Course) => (
           <Link
             key={course.id}
             href={`/courses/${course.id}`}
-            className="border p-4 rounded hover:shadow"
+            className="rounded border p-4 hover:shadow"
           >
             <h2 className="text-xl font-semibold">{course.title}</h2>
             <p className="text-gray-500">{course.description}</p>
@@ -38,7 +36,7 @@ export default async function CoursesPage({
       </div>
 
       {courses.length === 0 && (
-        <p className="text-gray-500 mt-6">No courses found.</p>
+        <p className="mt-6 text-gray-500">No courses found.</p>
       )}
     </main>
   );
