@@ -6,7 +6,7 @@ import { AdminCourseTable } from '@/app/dashboard/admin/_components/AdminCourseT
 import { useConfirm } from '@/context/ConfirmContext';
 import {
   AdminApiError,
-  type AdminCourseListResponse,
+  type AdminCourse,
   deleteCourseAdmin,
   disableCourseAdmin,
   getAdminCourses,
@@ -20,13 +20,14 @@ const statusOptions = ['', 'Active', 'Disabled', 'Archived'];
 
 export default function AdminCoursesPage() {
   const confirm = useConfirm();
+  const [items, setItems] = useState<AdminCourse[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [teacherFilter, setTeacherFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [data, setData] = useState<AdminCourseListResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
@@ -43,7 +44,10 @@ export default function AdminCoursesPage() {
         status: statusFilter || undefined,
         search: searchQuery.trim() || undefined,
       });
-      setData(response);
+      setItems(response.items);
+      setTotalCount(response.totalCount);
+      setPageNumber(response.pageNumber);
+      setPageSize(response.pageSize);
     } catch (err) {
       if (err instanceof AdminApiError) {
         setError(err.message);
@@ -65,11 +69,9 @@ export default function AdminCoursesPage() {
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
-  const totalCount = data?.totalCount ?? 0;
-  const computedPageSize = data?.pageSize ?? pageSize;
-  const totalPages = Math.max(1, Math.ceil(totalCount / (computedPageSize || 1)));
-  const startIndex = totalCount === 0 ? 0 : (pageNumber - 1) * computedPageSize + 1;
-  const endIndex = totalCount === 0 ? 0 : Math.min(totalCount, pageNumber * computedPageSize);
+  const totalPages = Math.max(1, Math.ceil(totalCount / (pageSize || 1)));
+  const startIndex = totalCount === 0 ? 0 : (pageNumber - 1) * pageSize + 1;
+  const endIndex = totalCount === 0 ? 0 : Math.min(totalCount, pageNumber * pageSize);
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -128,8 +130,6 @@ export default function AdminCoursesPage() {
       setActionState(null);
     }
   };
-
-  const currentCourses = data?.courses ?? [];
 
   const statusOptionsDisplay = useMemo(
     () =>
@@ -237,7 +237,7 @@ export default function AdminCoursesPage() {
         ) : null}
 
         <AdminCourseTable
-          courses={currentCourses}
+          items={items}
           loading={isLoading}
           error={error}
           actionState={actionState}
@@ -248,9 +248,11 @@ export default function AdminCoursesPage() {
         <footer className="flex flex-col items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm sm:flex-row">
           <div>
             <p className="font-semibold text-slate-900">
-              Showing {startIndex}-{endIndex} of {totalCount} courses
+              Showing {items.length} of {totalCount} courses
             </p>
-            <p className="text-xs text-slate-500">Page {pageNumber} of {totalPages}</p>
+            <p className="text-xs text-slate-500">
+              Records {startIndex}-{endIndex} · Page {pageNumber} of {totalPages}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <button
