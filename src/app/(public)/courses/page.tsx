@@ -1,16 +1,18 @@
-import { Course, getCourses } from "@/lib/courses";
-import Link from "next/link";
+import Link from 'next/link';
+
+import { Course, getCourses } from '@/lib/courses';
 
 export default async function CoursesPage({
   searchParams,
 }: {
-  searchParams?: { search?: string };
+  searchParams?: Promise<{ search?: string }>;
 }) {
-  const search = searchParams?.search || "";
+  const resolvedSearchParams = await searchParams;
+  const search = resolvedSearchParams?.search || '';
   const courses = await getCourses(search);
 
   return (
-    <main className="mx-auto max-w-5xl p-6">
+    <main className="mx-auto max-w-5xl px-4 py-10">
       <h1 className="mb-6 text-3xl font-bold">Courses</h1>
 
       <form className="mb-6">
@@ -27,7 +29,7 @@ export default async function CoursesPage({
           <Link
             key={course.id}
             href={`/courses/${course.id}`}
-            className="rounded border p-4 hover:shadow"
+            className="rounded border bg-white p-4 hover:shadow"
           >
             <h2 className="text-xl font-semibold">{course.title}</h2>
             <p className="text-gray-500">{course.description}</p>

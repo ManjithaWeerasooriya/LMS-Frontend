@@ -40,7 +40,7 @@ export default async function Home() {
   ];
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-10">
+    <main className="px-4 py-10">
       <div className="mx-auto flex max-w-6xl flex-col gap-8">
         <section className="overflow-hidden rounded-[32px] bg-white shadow-2xl shadow-slate-200/60">
           <div className="grid gap-10 px-6 py-10 sm:px-8 lg:grid-cols-[1.2fr_0.8fr] lg:px-12 lg:py-14">

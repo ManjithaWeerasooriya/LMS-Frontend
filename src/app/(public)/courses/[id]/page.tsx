@@ -4,9 +4,10 @@ import Link from "next/link";
 export default async function CourseDetail({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const course = await getCourseById(params.id);
+  const { id } = await params;
+  const course = await getCourseById(id);
 
   if (!course) {
     return <p className="p-6">Course not found</p>;
