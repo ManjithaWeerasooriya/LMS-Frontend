@@ -168,13 +168,14 @@ export default function AdminReportsPage() {
     };
   };
 
-  const rawEnrollmentCourses = report?.enrollment?.courses ?? report?.enrollment?.enrollmentByCourse;
+  const rawEnrollmentCourses =
+    report?.enrollment?.courses ?? report?.enrollment?.enrollmentByCourse ?? [];
   const enrollmentCourses = normalisePagedCourses(rawEnrollmentCourses);
 
   const overviewData: AdminOverviewReport | null = report
     ? {
         totalUsers: report.enrollment?.totalStudents ?? 0,
-        totalCourses: report.enrollment?.enrollmentByCourse?.length ?? 0,
+        totalCourses: enrollmentCourses.totalCount ?? enrollmentCourses.items.length,
         totalEnrollments:
           report.enrollment?.totalEnrollments ??
           enrollmentCourses.items.reduce((sum, item) => sum + (item.enrollmentCount ?? 0), 0),
