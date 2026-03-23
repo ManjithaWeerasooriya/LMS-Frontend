@@ -145,8 +145,11 @@ export type LiveSessionSummaryDto = {
 
 export type ReportsOverviewResponse = {
   enrollment: {
-    summary: Record<string, unknown> | null;
-    courses: PagedResult<CourseEnrollmentStatDto>;
+    summary?: Record<string, unknown> | null;
+    courses?: PagedResult<CourseEnrollmentStatDto>;
+    enrollmentByCourse?: CourseEnrollmentStatDto[];
+    totalStudents?: number;
+    totalEnrollments?: number;
     teachers: TeacherEnrollmentStatDto[];
     monthlyGrowth: EnrollmentGrowthPointDto[];
   };

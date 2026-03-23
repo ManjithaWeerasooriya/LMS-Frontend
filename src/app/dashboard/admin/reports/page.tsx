@@ -36,6 +36,23 @@ const toNumber = (value: unknown): number | undefined => {
   return undefined;
 };
 
+const readMetric = (source: unknown, keys: string[], fallback = 0): number => {
+  if (!source || typeof source !== 'object' || !keys.length) {
+    return fallback;
+  }
+  const normalizedTargets = keys.map((key) => normaliseToken(key));
+  for (const [rawKey, rawValue] of Object.entries(source as Record<string, unknown>)) {
+    const normalizedKey = normaliseToken(rawKey);
+    if (normalizedTargets.some((target) => normalizedKey.includes(target))) {
+      const parsed = toNumber(rawValue);
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+  }
+  return fallback;
+};
+
 const deepFindMetric = (
   node: unknown,
   synonyms: readonly string[],
@@ -154,9 +171,6 @@ export default function AdminReportsPage() {
   const rawEnrollmentCourses = report?.enrollment?.courses ?? report?.enrollment?.enrollmentByCourse;
   const enrollmentCourses = normalisePagedCourses(rawEnrollmentCourses);
 
-  const totalStudents = report?.enrollment?.totalStudents;
-  const totalEnrollmentsValue = report?.enrollment?.totalEnrollments;
-
   const overviewData: AdminOverviewReport | null = report
     ? {
         totalUsers: report.enrollment?.totalStudents ?? 0,
@@ -164,12 +178,13 @@ export default function AdminReportsPage() {
         totalEnrollments:
           report.enrollment?.totalEnrollments ??
           enrollmentCourses.items.reduce((sum, item) => sum + (item.enrollmentCount ?? 0), 0),
-        completionRate: extractMetric(
-          report.enrollment,
-          report.enrollment?.summary,
-          metricSynonyms.completion,
-          0,
-        ),
+        completionRate:
+          extractMetric(
+            report.enrollment,
+            report.enrollment?.summary,
+            metricSynonyms.completion,
+            0,
+          ) ?? 0,
       }
     : null;
 
