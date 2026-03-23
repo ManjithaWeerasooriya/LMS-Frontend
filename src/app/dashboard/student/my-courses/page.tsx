@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { useConfirm } from '@/context/ConfirmContext';
@@ -15,6 +16,7 @@ export default function MyCoursesPage() {
   const [loading, setLoading] = useState(true);
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<'available' | 'enrolled'>('enrolled');
   const confirm = useConfirm();
 
   const loadCourses = async (searchTerm?: string) => {
@@ -68,11 +70,46 @@ export default function MyCoursesPage() {
     }
   };
 
+  const filteredCourses = courses.filter((course) =>
+    view === 'available' ? !course.isEnrolled : course.isEnrolled,
+  );
+
   return (
     <div className="space-y-8">
-      <section className="space-y-2">
-        <h1 className="text-2xl font-semibold text-slate-900">Courses</h1>
-        <p className="text-sm text-slate-500">Browse available courses</p>
+      <section className="space-y-4">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold text-slate-900">Courses</h1>
+          <p className="text-sm text-slate-500">
+            {view === 'available'
+              ? 'Browse courses you can enroll in'
+              : 'View courses you have already enrolled in'}
+          </p>
+        </div>
+
+        <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1 text-xs font-medium text-slate-600">
+          <button
+            type="button"
+            onClick={() => setView('enrolled')}
+            className={`rounded-full px-4 py-1.5 transition ${
+              view === 'enrolled'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'hover:text-slate-900'
+            }`}
+          >
+            Enrolled Courses
+          </button>
+          <button
+            type="button"
+            onClick={() => setView('available')}
+            className={`rounded-full px-4 py-1.5 transition ${
+              view === 'available'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'hover:text-slate-900'
+            }`}
+          >
+            Available Courses
+          </button>
+        </div>
       </section>
 
       <section className="flex flex-col items-stretch justify-between gap-3 md:flex-row md:items-center">
@@ -134,9 +171,15 @@ export default function MyCoursesPage() {
         <div className="flex items-center justify-center py-10">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
         </div>
+      ) : filteredCourses.length === 0 ? (
+        <p className="py-10 text-center text-sm text-slate-500">
+          {view === 'available'
+            ? 'No courses found. Try adjusting your search.'
+            : "You haven't enrolled in any courses yet."}
+        </p>
       ) : (
         <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {courses.map((course) => {
+          {filteredCourses.map((course) => {
             const isEnrolled = course.isEnrolled;
             const isBusy = enrollingId === course.id;
 
@@ -202,22 +245,25 @@ export default function MyCoursesPage() {
                     </span>
                   </div>
 
-                  <button
-                    type="button"
-                    disabled={isEnrolled || isBusy}
-                    onClick={() => handleEnrollClick(course.id)}
-                    className={`mt-3 inline-flex items-center justify-center rounded-2xl px-5 py-2 text-sm font-semibold text-white shadow-sm transition ${
-                      isEnrolled
-                        ? 'bg-slate-400 cursor-not-allowed'
-                        : 'bg-[#1B3B8B] hover:bg-[#163170]'
-                    }`}
-                  >
-                    {isEnrolled
-                      ? 'Enrolled'
-                      : isBusy
-                        ? 'Enrolling...'
-                        : 'Enroll Now'}
-                  </button>
+                  {view === 'available' && !isEnrolled ? (
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => handleEnrollClick(course.id)}
+                      className="mt-3 inline-flex items-center justify-center rounded-2xl bg-[#1B3B8B] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#163170] disabled:cursor-not-allowed disabled:bg-slate-400"
+                    >
+                      {isBusy ? 'Enrolling...' : 'Enroll Now'}
+                    </button>
+                  ) : null}
+
+                  {view === 'enrolled' && isEnrolled ? (
+                    <Link
+                      href={`/dashboard/student/my-courses/${course.id}/discussion`}
+                      className="mt-3 inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-5 py-2 text-sm font-semibold text-[#1B3B8B] shadow-sm transition hover:bg-slate-100"
+                    >
+                      View Discussion
+                    </Link>
+                  ) : null}
                 </div>
               </article>
             );

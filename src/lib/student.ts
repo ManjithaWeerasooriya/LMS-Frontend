@@ -39,6 +39,15 @@ export type StudentDashboardQuiz = {
   durationMinutes: number;
 };
 
+export type CourseDiscussionMessage = {
+  id: string;
+  authorName: string;
+  authorInitials: string;
+  content: string;
+  createdAt: string;
+  replies: CourseDiscussionMessage[];
+};
+
 type StudentDashboardResponse = {
   summary: {
     enrolledCourses: number;
@@ -141,5 +150,35 @@ export async function getMyStudentCourses(): Promise<StudentCourse[]> {
 
 export async function enrollInCourse(courseId: string): Promise<void> {
   await apiClient.post(`/api/v1/student/courses/${courseId}/enroll`);
+}
+
+export async function getCourseDiscussion(
+  courseId: string,
+): Promise<CourseDiscussionMessage[]> {
+  const { data } = await apiClient.get<CourseDiscussionMessage[]>(
+    `/api/v1/student/courses/${courseId}/discussions`,
+  );
+  return data;
+}
+
+export async function postCourseDiscussionMessage(
+  courseId: string,
+  content: string,
+  parentMessageId?: string,
+): Promise<CourseDiscussionMessage> {
+  const payload: { content: string; parentMessageId?: string | null } = {
+    content,
+  };
+
+  if (parentMessageId) {
+    payload.parentMessageId = parentMessageId;
+  }
+
+  const { data } = await apiClient.post<CourseDiscussionMessage>(
+    `/api/v1/student/courses/${courseId}/discussions`,
+    payload,
+  );
+
+  return data;
 }
 
