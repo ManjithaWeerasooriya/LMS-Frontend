@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { scheduleLiveClass, type ScheduleLiveClassInput } from '@/lib/teacher';
+import { scheduleLiveClass, type ScheduleLiveClassInput } from '@/features/teacher/api/teacher';
 
 export type ScheduleLiveClassModalProps = {
   open: boolean;

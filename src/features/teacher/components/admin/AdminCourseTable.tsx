@@ -1,6 +1,6 @@
 'use client';
 
-import type { AdminCourse } from '@/lib/admin';
+import type { AdminCourse } from '@/features/teacher/api/admin';
 
 type AdminCourseTableProps = {
   items: AdminCourse[];

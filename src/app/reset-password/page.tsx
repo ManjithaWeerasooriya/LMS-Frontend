@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 
 import { useConfirm } from '@/context/ConfirmContext';
-import { resetPassword, UserApiError } from '@/lib/user';
+import { resetPassword, UserApiError } from '@/features/account/api/user';
 
 export default function ResetPasswordPage() {
   return (

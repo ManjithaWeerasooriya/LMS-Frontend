@@ -7,7 +7,7 @@ import {
   updateCourse,
   type CreateCourseInput,
   type TeacherCourseDetail,
-} from '@/lib/teacher';
+} from '@/features/teacher/api/teacher';
 
 export type CourseModalMode = 'create' | 'edit';
 

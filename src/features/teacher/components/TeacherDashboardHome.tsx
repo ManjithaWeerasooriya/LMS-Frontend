@@ -26,20 +26,20 @@ import {
   type PerformanceSlice,
   type TeacherCourseDetail,
   type TeacherDashboardSummary,
-} from '@/lib/teacher';
+} from '@/features/teacher/api/teacher';
 
 import {
   CreateCourseModal,
   type CreateCourseModalProps,
-} from '@/components/dashboard/teacher/CreateCourseModal';
+} from '@/features/teacher/components/CreateCourseModal';
 import {
   CreateQuizModal,
   type CreateQuizModalProps,
-} from '@/components/dashboard/teacher/CreateQuizModal';
+} from '@/features/teacher/components/CreateQuizModal';
 import {
   ScheduleLiveClassModal,
   type ScheduleLiveClassModalProps,
-} from '@/components/dashboard/teacher/ScheduleLiveClassModal';
+} from '@/features/teacher/components/ScheduleLiveClassModal';
 
 type DashboardState = {
   summary: TeacherDashboardSummary | null;

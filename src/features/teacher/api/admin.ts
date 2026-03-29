@@ -1,4 +1,10 @@
 import { apiClient, isAxiosAuthError } from '@/lib/http';
+import type {
+  CourseListItemDto as ApiCourseListItemDto,
+  CourseListItemDtoPagedResult as ApiCourseListItemDtoPagedResult,
+  ReportOverviewDto as ApiReportOverviewDto,
+  SuspendUserDto,
+} from '@/generated/api-types';
 
 export type AdminUserRole = 'Student' | 'Teacher' | 'Admin';
 export type AdminUserStatus = 'Active' | 'Pending' | 'Suspended';
@@ -517,7 +523,7 @@ export async function getAdminUsers(query: AdminUserQuery): Promise<AdminUserLis
   }
 }
 
-type RawAdminCourse = AdminCourse & {
+type RawAdminCourse = ApiCourseListItemDto & Partial<AdminCourse> & {
   teacher?: {
     fullName?: string | null;
     name?: string | null;
@@ -562,7 +568,7 @@ const normalizeDateValue = (value: unknown): string | undefined => {
 
 export async function getAdminCourses(query: AdminCourseQuery = {}): Promise<PagedResponse<AdminCourse>> {
   try {
-    const { data } = await apiClient.get<PagedResponse<AdminCourse>>(`${ADMIN_BASE}/courses`, {
+    const { data } = await apiClient.get<ApiCourseListItemDtoPagedResult>(`${ADMIN_BASE}/courses`, {
       params: query,
     });
 
@@ -574,14 +580,14 @@ export async function getAdminCourses(query: AdminCourseQuery = {}): Promise<Pag
         teacher?.name ??
         [teacher?.firstName, teacher?.lastName].filter(Boolean).join(' ').trim();
       const fallbackTeacherName =
-        item.teacherName ??
+        raw.teacherName ??
         raw.instructorName ??
         raw.ownerName ??
         (teacherNameFromTeacher ? teacherNameFromTeacher : undefined);
-      const teacherEmail = item.teacherEmail ?? teacher?.email ?? raw.instructorEmail ?? null;
+      const teacherEmail = raw.teacherEmail ?? teacher?.email ?? raw.instructorEmail ?? null;
 
       const createdAt =
-        normalizeDateValue(item.createdAt) ??
+        normalizeDateValue(raw.createdAt) ??
         normalizeDateValue(raw.createdOn) ??
         normalizeDateValue(raw.createdDate) ??
         normalizeDateValue(raw.created) ??
@@ -594,15 +600,20 @@ export async function getAdminCourses(query: AdminCourseQuery = {}): Promise<Pag
         '';
 
       return {
-        ...item,
-        teacherName: fallbackTeacherName,
+        id: raw.id ?? '',
+        title: raw.title?.trim() || 'Untitled Course',
+        teacherName: fallbackTeacherName ?? 'Unknown Teacher',
         teacherEmail,
-        createdAt,
+        status: raw.status?.trim() || 'Unknown',
+        enrollmentCount: raw.students ?? raw.enrollmentCount ?? 0,
+        createdAt: createdAt ?? '',
       };
     });
 
     return {
-      ...data,
+      pageNumber: data.pageNumber ?? 1,
+      pageSize: data.pageSize ?? normalizedItems.length,
+      totalCount: data.totalCount ?? normalizedItems.length,
       items: normalizedItems,
     };
   } catch (error) {
@@ -655,8 +666,53 @@ export async function getAdminQuizReport(): Promise<AdminQuizReportSummary> {
 
 export async function getAdminReportsOverview(): Promise<ReportsOverviewResponse> {
   try {
-    const { data } = await apiClient.get<ReportsOverviewResponse>(`${ADMIN_BASE}/reports/overview`);
-    return data;
+    const { data } = await apiClient.get<ApiReportOverviewDto>(`${ADMIN_BASE}/reports/overview`);
+    return {
+      enrollment: {
+        summary: null,
+        courses: undefined,
+        enrollmentByCourse: (data.enrollment?.enrollmentByCourse ?? []).map((course) => ({
+          courseId: course.courseId ?? '',
+          courseTitle: course.courseTitle ?? 'Untitled Course',
+          teacherName: null,
+          enrollmentCount: course.studentCount ?? 0,
+          completionRate: course.averageProgressPercent ?? 0,
+          status: course.status ?? 'Unknown',
+        })),
+        totalStudents: data.enrollment?.totalStudents ?? 0,
+        totalEnrollments: data.enrollment?.totalEnrollments ?? 0,
+        teachers: [],
+        monthlyGrowth: (data.enrollment?.monthlyGrowth ?? []).map((point) => ({
+          month:
+            point.year != null && point.month != null
+              ? `${point.year}-${String(point.month).padStart(2, '0')}`
+              : '',
+          enrollments: point.enrollments ?? 0,
+        })),
+      },
+      quizzes: {
+        summary: null,
+        quizzes: (data.quizzes?.averageScorePerQuiz ?? []).map((quiz) => ({
+          quizId: quiz.quizId ?? '',
+          quizTitle: quiz.quizTitle ?? 'Untitled Quiz',
+          averageScore: quiz.averageScorePercent ?? 0,
+          passRate: 0,
+          attempts: quiz.attempts ?? 0,
+        })),
+        performanceBands: data.quizzes?.performanceBands ?? {},
+        attemptsByStudent: [],
+      },
+      attendance: {
+        courses: [],
+        studentTrends: [],
+        upcomingSessions: (data.attendance?.upcomingSessionDetails ?? []).map((session) => ({
+          sessionId: session.liveClassId ?? '',
+          topic: session.topic ?? 'Live Session',
+          scheduledAt: session.scheduledAt ?? '',
+          attendees: session.studentsEnrolled ?? 0,
+        })),
+      },
+    };
   } catch (error) {
     throw convertAxiosError(error);
   }
@@ -664,7 +720,8 @@ export async function getAdminReportsOverview(): Promise<ReportsOverviewResponse
 
 export async function suspendUser(userId: string, reason = ''): Promise<void> {
   try {
-    await apiClient.patch(`${ADMIN_BASE}/users/${userId}/suspend`, { userId, reason });
+    const payload: SuspendUserDto = { userId, reason };
+    await apiClient.patch(`${ADMIN_BASE}/users/${userId}/suspend`, payload);
   } catch (error) {
     throw convertAxiosError(error);
   }

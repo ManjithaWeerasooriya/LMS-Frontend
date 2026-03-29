@@ -1,6 +1,6 @@
 'use client';
 
-import type { AdminOverviewReport } from '@/lib/admin';
+import type { AdminOverviewReport } from '@/features/teacher/api/admin';
 
 type AdminReportsOverviewProps = {
   data: AdminOverviewReport | null;

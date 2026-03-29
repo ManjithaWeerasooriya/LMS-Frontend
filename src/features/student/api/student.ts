@@ -1,4 +1,5 @@
 import { apiClient, isAxiosAuthError } from '@/lib/http';
+import type { StudentDashboardResponseDto } from '@/generated/api-types';
 
 export type StudentDashboardSummary = {
   enrolledCourses: number;
@@ -28,33 +29,6 @@ export type StudentDashboardQuiz = {
   durationMinutes: number;
 };
 
-type StudentDashboardResponse = {
-  summary?: {
-    enrolledCourses?: number;
-    upcomingClasses?: number;
-    pendingQuizzes?: number;
-  } | null;
-  myCourses?: Array<{
-    courseId?: string;
-    title?: string | null;
-    instructorName?: string | null;
-    progressPercent?: number;
-  }> | null;
-  upcomingClasses?: Array<{
-    liveClassId?: string;
-    topic?: string | null;
-    courseTitle?: string | null;
-    scheduledAt?: string;
-    durationMinutes?: number | null;
-  }> | null;
-  pendingQuizzes?: Array<{
-    quizId?: string;
-    title?: string | null;
-    courseTitle?: string | null;
-    durationMinutes?: number;
-  }> | null;
-};
-
 export class StudentApiError extends Error {
   public status: number;
 
@@ -72,7 +46,7 @@ export async function getStudentDashboard(): Promise<{
   pendingQuizzes: StudentDashboardQuiz[];
 }> {
   try {
-    const { data } = await apiClient.get<StudentDashboardResponse>('/api/v1/student/dashboard');
+    const { data } = await apiClient.get<StudentDashboardResponseDto>('/api/v1/student/dashboard');
 
     return {
       summary: {

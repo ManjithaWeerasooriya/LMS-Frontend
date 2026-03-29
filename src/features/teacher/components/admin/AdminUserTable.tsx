@@ -1,6 +1,6 @@
 'use client';
 
-import { type AdminUser } from '@/lib/admin';
+import { type AdminUser } from '@/features/teacher/api/admin';
 
 type ActionType = 'suspend' | 'reactivate' | 'approve' | 'reject';
 

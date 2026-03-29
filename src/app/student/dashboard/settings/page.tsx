@@ -1,5 +1,1 @@
-import { ProfileSettings } from '@/components/settings/ProfileSettings';
-
-export default function StudentSettingsPage() {
-  return <ProfileSettings />;
-}
+export { default } from '@/features/account/pages/AccountSettingsPage';

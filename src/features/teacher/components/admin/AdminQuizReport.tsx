@@ -1,6 +1,6 @@
 'use client';
 
-import type { AdminQuizReportSummary } from '@/lib/admin';
+import type { AdminQuizReportSummary } from '@/features/teacher/api/admin';
 
 type AdminQuizReportProps = {
   report: AdminQuizReportSummary | null;

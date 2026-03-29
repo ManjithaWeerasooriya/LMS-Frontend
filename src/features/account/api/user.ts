@@ -1,5 +1,11 @@
 import { apiConfig } from '@/lib/config';
 import { apiClient, isAxiosAuthError } from '@/lib/http';
+import type {
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  UpdateMyProfileRequest,
+  UserProfileRequest,
+} from '@/generated/api-types';
 
 export type UserProfile = {
   id: string;
@@ -82,17 +88,35 @@ function extractErrors(payload: unknown): { message: string; details?: string[] 
 
 export async function getMyProfile(): Promise<UserProfile> {
   try {
-    const { data } = await apiClient.get<UserProfile>('/api/v1/users/me');
-    return data;
+    const { data } = await apiClient.get<UserProfileRequest>('/api/v1/users/me');
+    return {
+      id: data.id ?? '',
+      email: data.email ?? '',
+      firstName: data.firstName ?? null,
+      lastName: data.lastName ?? null,
+      phone: data.phone ?? null,
+      status: data.status != null ? String(data.status) : undefined,
+      createdAt: data.createdAt,
+      lastLoginAt: data.lastLoginAt ?? null,
+    };
   } catch (error) {
     throw convertAxiosError(error);
   }
 }
 
-export async function updateMyProfile(payload: { firstName?: string; lastName?: string; phone?: string }): Promise<UserProfile> {
+export async function updateMyProfile(payload: UpdateMyProfileRequest): Promise<UserProfile> {
   try {
-    const { data } = await apiClient.put<UserProfile>('/api/v1/users/me', payload);
-    return data;
+    const { data } = await apiClient.put<UserProfileRequest>('/api/v1/users/me', payload);
+    return {
+      id: data.id ?? '',
+      email: data.email ?? '',
+      firstName: data.firstName ?? null,
+      lastName: data.lastName ?? null,
+      phone: data.phone ?? null,
+      status: data.status != null ? String(data.status) : undefined,
+      createdAt: data.createdAt,
+      lastLoginAt: data.lastLoginAt ?? null,
+    };
   } catch (error) {
     throw convertAxiosError(error);
   }
@@ -117,16 +141,17 @@ export async function confirmAccountDeletion(params: { userId: string; token: st
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
+  const payload: ForgotPasswordRequest = { email };
   await fetch(`${BASE_URL}/api/v1/auth/forgot-password`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify(payload),
   });
 }
 
-export async function resetPassword(payload: { userId: string; token: string; newPassword: string; confirmPassword: string }): Promise<void> {
+export async function resetPassword(payload: ResetPasswordRequest): Promise<void> {
   const response = await fetch(`${BASE_URL}/api/v1/auth/reset-password`, {
     method: 'POST',
     headers: {

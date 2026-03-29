@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from 'react';
 
-import { createQuiz, getTeacherCourses, type CreateQuizInput, type TeacherCourse } from '@/lib/teacher';
+import {
+  createQuiz,
+  getTeacherCourses,
+  type CreateQuizInput,
+  type TeacherCourse,
+} from '@/features/teacher/api/teacher';
 
 export type CreateQuizModalProps = {
   open: boolean;

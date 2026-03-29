@@ -10,9 +10,9 @@ import {
   updateMyProfile,
   UserApiError,
   type UserProfile,
-} from '@/lib/user';
+} from '@/features/account/api/user';
 
-export function ProfileSettings() {
+export function AccountSettings() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [formValues, setFormValues] = useState({ firstName: '', lastName: '' });
