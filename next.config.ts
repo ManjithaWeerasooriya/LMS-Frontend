@@ -5,6 +5,16 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: '/dashboard/student',
+        destination: '/student/dashboard',
+        permanent: false,
+      },
+      {
+        source: '/dashboard/student/:path*',
+        destination: '/student/dashboard',
+        permanent: false,
+      },
+      {
         source: '/register/teacher',
         destination: '/register',
         permanent: false,
