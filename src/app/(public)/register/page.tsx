@@ -9,12 +9,6 @@ const registrationOptions = [
     description: 'Join courses, submit assignments, and track your progress in one place.',
     cta: 'Register as Student',
   },
-  {
-    href: '/register/teacher',
-    title: 'Teacher Registration',
-    description: 'Create and manage courses, run live classes, and guide learners effectively.',
-    cta: 'Register as Teacher',
-  },
 ];
 
 export default function RegisterLandingPage() {
@@ -22,10 +16,10 @@ export default function RegisterLandingPage() {
     <main className="min-h-screen bg-slate-100 px-4 py-10">
       <div className="mx-auto flex max-w-5xl justify-center">
         <AuthCard
-          title="Choose Your Registration"
-          subtitle="Select the account type that matches how you will use the learning platform."
+          title="Student Registration"
+          subtitle="Create a student account to access lessons, assignments, and progress tracking."
         >
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4">
             {registrationOptions.map((option) => (
               <section
                 key={option.href}

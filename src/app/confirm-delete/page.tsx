@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import { useConfirm } from '@/context/ConfirmContext';
 import { clearStoredAuth } from '@/lib/auth';
-import { confirmAccountDeletion, UserApiError } from '@/lib/user';
+import { confirmAccountDeletion, UserApiError } from '@/features/account/api/user';
 
 type Status = 'loading' | 'success' | 'error';
 
