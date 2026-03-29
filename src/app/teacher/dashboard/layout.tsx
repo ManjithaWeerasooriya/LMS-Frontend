@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   BarChart3,
   BookOpen,
@@ -19,6 +19,7 @@ import {
   Users,
 } from 'lucide-react';
 
+import { AppNavbar } from '@/components/AppNavbar';
 import { useConfirm } from '@/context/ConfirmContext';
 import {
   decodeJwt,
@@ -65,24 +66,6 @@ const getStatusClaim = (payload: DecodedJwt | null): string | undefined => {
   return typeof value === 'string' ? value : undefined;
 };
 
-const getDisplayName = (payload: DecodedJwt | null): string => {
-  if (!payload) return 'Tutor';
-  const keys = [
-    'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name',
-    'name',
-    'unique_name',
-    'email',
-    'sub',
-  ];
-  for (const key of keys) {
-    const value = payload[key];
-    if (typeof value === 'string' && value.trim()) {
-      return value;
-    }
-  }
-  return 'Tutor';
-};
-
 export default function TeacherDashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -90,12 +73,8 @@ export default function TeacherDashboardLayout({ children }: { children: ReactNo
 
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [tutorName, setTutorName] = useState('Tutor');
   const [status, setStatus] = useState<string | null>(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileSidebarExpanded, setIsMobileSidebarExpanded] = useState(false);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,7 +120,6 @@ export default function TeacherDashboardLayout({ children }: { children: ReactNo
       }
 
       if (!cancelled) {
-        setTutorName(getDisplayName(payload));
         setStatus(getStatusClaim(payload) ?? null);
         setIsAuthorized(true);
         setIsChecking(false);
@@ -154,28 +132,6 @@ export default function TeacherDashboardLayout({ children }: { children: ReactNo
       cancelled = true;
     };
   }, [router]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(target) &&
-        menuButtonRef.current &&
-        !menuButtonRef.current.contains(target)
-      ) {
-        setIsMenuOpen(false);
-      }
-    };
-
-    if (isMenuOpen) {
-      window.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      window.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isMenuOpen]);
 
   const handleLogout = async () => {
     const approved = await confirm({
@@ -326,8 +282,8 @@ export default function TeacherDashboardLayout({ children }: { children: ReactNo
       </aside>
 
       <div className="flex h-full flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm md:px-6">
-          <div className="flex flex-1 items-center gap-4">
+        <AppNavbar
+          leading={
             <button
               type="button"
               onClick={() => setIsMobileSidebarExpanded((prev) => !prev)}
@@ -340,98 +296,9 @@ export default function TeacherDashboardLayout({ children }: { children: ReactNo
                 <Menu className="h-4 w-4" />
               )}
             </button>
-            <div className="relative w-full max-w-xl">
-              <input
-                type="search"
-                placeholder="Search courses, students, and reports..."
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 pl-11 text-sm text-slate-700 outline-none ring-0 transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-              />
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="11" cy="11" r="7" />
-                  <line x1="16.65" y1="16.65" x2="21" y2="21" />
-                </svg>
-              </span>
-            </div>
-          </div>
-
-          <div className="ml-4 flex items-center gap-4">
-            <button
-              type="button"
-              className="relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm"
-              aria-label="Notifications"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.7"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-              <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[0.6rem] font-semibold text-white">
-                3
-              </span>
-            </button>
-
-            <div className="relative">
-              <button
-                ref={menuButtonRef}
-                type="button"
-                onClick={() => setIsMenuOpen((prev) => !prev)}
-                className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1.5 transition hover:border-blue-400 hover:bg-white"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1B3B8B] text-xs font-semibold text-white">
-                  {tutorName
-                    .split(' ')
-                    .map((part) => part.charAt(0).toUpperCase())
-                    .slice(0, 2)
-                    .join('')}
-                </div>
-                <div className="hidden text-left text-xs leading-tight md:block">
-                  <p className="max-w-[10rem] truncate font-semibold text-slate-900">{tutorName}</p>
-                  <p className="text-[0.7rem] text-slate-500">Tutor</p>
-                </div>
-              </button>
-
-              {isMenuOpen ? (
-                <div
-                  ref={menuRef}
-                  className="absolute right-0 z-20 mt-2 w-48 rounded-2xl border border-slate-200 bg-white p-2 text-sm shadow-xl"
-                >
-                  <Link
-                    href="/teacher/dashboard/settings"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="block rounded-xl px-3 py-2 font-medium text-slate-700 transition hover:bg-slate-100"
-                  >
-                    Settings
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="mt-1 block w-full rounded-xl px-3 py-2 text-left font-medium text-rose-600 transition hover:bg-rose-50"
-                  >
-                    Logout
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </header>
+          }
+          contentClassName="flex w-full items-center justify-between px-4 py-3 md:px-6"
+        />
 
         <main className="flex-1 overflow-y-auto bg-slate-100 px-4 py-6 md:px-6">{children}</main>
       </div>

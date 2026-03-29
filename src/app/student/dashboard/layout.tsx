@@ -5,6 +5,7 @@ import { BarChart3, LogOut, Menu, PanelLeftClose, type LucideIcon } from 'lucide
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
+import { AppNavbar } from '@/components/AppNavbar';
 import { useConfirm } from '@/context/ConfirmContext';
 import {
   decodeJwt,
@@ -36,33 +37,12 @@ const getRoleClaim = (payload: DecodedJwt | null): string | undefined => {
   return undefined;
 };
 
-const getDisplayName = (payload: DecodedJwt | null): string => {
-  if (!payload) return 'Student';
-  const keys = [
-    'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name',
-    'name',
-    'unique_name',
-    'email',
-    'sub',
-  ];
-
-  for (const key of keys) {
-    const value = payload[key];
-    if (typeof value === 'string' && value.trim()) {
-      return value;
-    }
-  }
-
-  return 'Student';
-};
-
 export default function StudentDashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const confirm = useConfirm();
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [studentName, setStudentName] = useState('Student');
   const [isMobileSidebarExpanded, setIsMobileSidebarExpanded] = useState(false);
 
   useEffect(() => {
@@ -109,7 +89,6 @@ export default function StudentDashboardLayout({ children }: { children: ReactNo
       }
 
       if (!cancelled) {
-        setStudentName(getDisplayName(payload));
         setIsAuthorized(true);
         setIsChecking(false);
       }
@@ -138,16 +117,6 @@ export default function StudentDashboardLayout({ children }: { children: ReactNo
     await logoutUser();
     router.replace('/login');
   };
-
-  const initials = useMemo(
-    () =>
-      studentName
-        .split(' ')
-        .map((part) => part.charAt(0).toUpperCase())
-        .slice(0, 2)
-        .join(''),
-    [studentName],
-  );
 
   const sidebarItems = useMemo(
     () =>
@@ -230,8 +199,8 @@ export default function StudentDashboardLayout({ children }: { children: ReactNo
       </aside>
 
       <div className="flex h-full flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm md:px-6">
-          <div className="flex flex-1 items-center gap-4">
+        <AppNavbar
+          leading={
             <button
               type="button"
               onClick={() => setIsMobileSidebarExpanded((prev) => !prev)}
@@ -244,42 +213,9 @@ export default function StudentDashboardLayout({ children }: { children: ReactNo
                 <Menu className="h-4 w-4" />
               )}
             </button>
-            <div className="relative w-full max-w-xl">
-              <input
-                type="search"
-                placeholder="Search your courses, classes, and quizzes..."
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 pl-11 text-sm text-slate-700 outline-none ring-0 transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-              />
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="11" cy="11" r="7" />
-                  <line x1="16.65" y1="16.65" x2="21" y2="21" />
-                </svg>
-              </span>
-            </div>
-          </div>
-
-          <div className="ml-4 flex items-center gap-4">
-            <div className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1.5 sm:flex">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1B3B8B] text-xs font-semibold text-white">
-                {initials}
-              </div>
-              <div className="text-left text-xs leading-tight">
-                <p className="max-w-[10rem] truncate font-semibold text-slate-900">{studentName}</p>
-                <p className="text-[0.7rem] text-slate-500">Student</p>
-              </div>
-            </div>
-          </div>
-        </header>
+          }
+          contentClassName="flex w-full items-center justify-between px-4 py-3 md:px-6"
+        />
 
         <main className="flex-1 overflow-y-auto bg-slate-100 px-4 py-6 md:px-6">
           {children}
