@@ -1,6 +1,4 @@
 'use client';
-
-import Link from 'next/link';
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -8,7 +6,7 @@ import TeacherDashboardLayout from '@/app/teacher/dashboard/layout';
 import { decodeJwt, getStoredAuthToken, logoutUser } from '@/lib/auth';
 import { getMyProfile, requestPasswordReset, updateMyProfile, UserApiError, type UserProfile } from '@/lib/user';
 
-function ProfileContent() {
+export function ProfileContent() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [formValues, setFormValues] = useState({ firstName: '', lastName: '' });
@@ -125,7 +123,7 @@ function ProfileContent() {
     <div className="space-y-6">
       <header>
         <p className="text-sm uppercase tracking-[0.4em] text-blue-600">Dashboard</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-900">My Profile</h1>
+        <h1 className="mt-2 text-3xl font-semibold text-slate-900">Settings</h1>
         <p className="mt-1 text-sm text-slate-500">Manage your account details and security.</p>
       </header>
 
@@ -251,23 +249,6 @@ function ProfileContent() {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-rose-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-rose-700">Delete Account</h2>
-                <p className="text-sm text-slate-500">Permanently remove your account and associated data.</p>
-              </div>
-              <Link
-                href="/dashboard/profile/delete-account"
-                className="rounded-2xl border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:border-rose-400 hover:bg-rose-50"
-              >
-                Go to Delete Account
-              </Link>
-            </div>
-            <p className="mt-4 text-sm text-slate-500">
-              Account deletion requires email confirmation. You will receive instructions after submitting the request.
-            </p>
-          </section>
         </section>
       )}
     </div>

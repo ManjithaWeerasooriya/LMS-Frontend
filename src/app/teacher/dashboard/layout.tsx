@@ -9,9 +9,12 @@ import {
   FileText,
   LineChart,
   LogOut,
+  Menu,
   MonitorPlay,
   Package2,
+  PanelLeftClose,
   ShieldCheck,
+  Settings,
   type LucideIcon,
   Users,
 } from 'lucide-react';
@@ -41,6 +44,7 @@ const sidebarLinks: SidebarLink[] = [
   { label: 'Users', href: '/teacher/dashboard/users', icon: Users },
   { label: 'Platform Courses', href: '/teacher/dashboard/platform-courses', icon: ShieldCheck },
   { label: 'Reports', href: '/teacher/dashboard/reports', icon: BarChart3 },
+  { label: 'Settings', href: '/teacher/dashboard/settings', icon: Settings },
 ];
 
 const getRoleClaim = (payload: DecodedJwt | null): string | undefined => {
@@ -89,6 +93,7 @@ export default function TeacherDashboardLayout({ children }: { children: ReactNo
   const [tutorName, setTutorName] = useState('Tutor');
   const [status, setStatus] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileSidebarExpanded, setIsMobileSidebarExpanded] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -198,20 +203,24 @@ export default function TeacherDashboardLayout({ children }: { children: ReactNo
         const linkClasses = isActive
           ? 'bg-[#1B3B8B] text-white'
           : 'text-slate-700 hover:bg-slate-100';
+        const itemLayoutClasses = isMobileSidebarExpanded
+          ? 'justify-start px-5'
+          : 'justify-center px-0 md:justify-start md:px-5';
+        const labelClasses = isMobileSidebarExpanded ? 'inline' : 'hidden md:inline';
 
         return (
           <li key={item.href}>
             <Link
               href={item.href}
-              className={`flex items-center gap-3 rounded-2xl px-5 py-2.5 text-sm font-semibold transition-colors ${linkClasses}`}
+              className={`flex items-center gap-3 rounded-2xl py-2.5 text-sm font-semibold transition-colors ${linkClasses} ${itemLayoutClasses}`}
             >
               <Icon className="h-4 w-4" />
-              {item.label}
+              <span className={labelClasses}>{item.label}</span>
             </Link>
           </li>
         );
       }),
-    [pathname],
+    [isMobileSidebarExpanded, pathname],
   );
 
   if (isChecking) {
@@ -279,12 +288,20 @@ export default function TeacherDashboardLayout({ children }: { children: ReactNo
 
   return (
     <div className="flex h-screen bg-slate-100">
-      <aside className="hidden h-full w-72 flex-shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white px-4 py-6 text-slate-900 md:flex">
-        <div className="flex items-center gap-3 px-2">
+      <aside
+        className={`flex h-full flex-shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white px-4 py-6 text-slate-900 transition-[width] duration-200 ${
+          isMobileSidebarExpanded ? 'w-72' : 'w-20 md:w-72'
+        }`}
+      >
+        <div
+          className={`flex items-center ${
+            isMobileSidebarExpanded ? 'gap-3 px-2' : 'justify-center px-0 md:justify-start md:gap-3 md:px-2'
+          }`}
+        >
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#1B3B8B] text-white">
             <span className="text-lg font-semibold">GE</span>
           </div>
-          <div>
+          <div className={isMobileSidebarExpanded ? 'block' : 'hidden md:block'}>
             <p className="text-sm font-semibold leading-tight">Genuine English</p>
             <p className="text-xs text-slate-500">Tutor Console</p>
           </div>
@@ -298,10 +315,12 @@ export default function TeacherDashboardLayout({ children }: { children: ReactNo
           <button
             type="button"
             onClick={handleLogout}
-            className="inline-flex w-full items-center justify-start gap-3 rounded-2xl px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className={`inline-flex w-full items-center gap-3 rounded-2xl py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 ${
+              isMobileSidebarExpanded ? 'justify-start px-5' : 'justify-center px-0 md:justify-start md:px-5'
+            }`}
           >
             <LogOut className="h-4 w-4" />
-            Logout
+            <span className={isMobileSidebarExpanded ? 'inline' : 'hidden md:inline'}>Logout</span>
           </button>
         </div>
       </aside>
@@ -309,11 +328,18 @@ export default function TeacherDashboardLayout({ children }: { children: ReactNo
       <div className="flex h-full flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm md:px-6">
           <div className="flex flex-1 items-center gap-4">
-            <div className="flex items-center gap-3 md:hidden">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#1B3B8B] text-white">
-                GE
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={() => setIsMobileSidebarExpanded((prev) => !prev)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 md:hidden"
+              aria-label={isMobileSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+            >
+              {isMobileSidebarExpanded ? (
+                <PanelLeftClose className="h-4 w-4" />
+              ) : (
+                <Menu className="h-4 w-4" />
+              )}
+            </button>
             <div className="relative w-full max-w-xl">
               <input
                 type="search"
@@ -388,11 +414,11 @@ export default function TeacherDashboardLayout({ children }: { children: ReactNo
                   className="absolute right-0 z-20 mt-2 w-48 rounded-2xl border border-slate-200 bg-white p-2 text-sm shadow-xl"
                 >
                   <Link
-                    href="/dashboard/profile"
+                    href="/teacher/dashboard/settings"
                     onClick={() => setIsMenuOpen(false)}
                     className="block rounded-xl px-3 py-2 font-medium text-slate-700 transition hover:bg-slate-100"
                   >
-                    My Profile
+                    Settings
                   </Link>
                   <button
                     type="button"

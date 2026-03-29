@@ -9,7 +9,7 @@ import { useConfirm } from '@/context/ConfirmContext';
 import { logoutUser } from '@/lib/auth';
 import { requestAccountDeletion, UserApiError } from '@/lib/user';
 
-function DeleteAccountContent() {
+export function DeleteAccountContent() {
   const router = useRouter();
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,10 +112,10 @@ function DeleteAccountContent() {
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Link
-            href="/dashboard/profile"
+            href="/teacher/dashboard/settings"
             className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-400 hover:bg-blue-50"
           >
-            Back to Profile
+            Back to Settings
           </Link>
           <button
             type="submit"
