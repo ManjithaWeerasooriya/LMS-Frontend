@@ -131,21 +131,12 @@ export function LoginForm() {
       <div className="border-t border-slate-200" />
 
       <div className="text-center">
-        <p className="text-sm text-slate-500">Don’t have an account?</p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <Link
-            href="/register/student"
-            className="rounded-2xl border border-blue-200 px-4 py-3 text-sm font-semibold text-blue-900 transition hover:border-blue-400 hover:bg-blue-50"
-          >
-            Register as Student
+        <p className="text-sm text-slate-500">
+          Don’t have an account?{' '}
+          <Link href="/register/student" className="font-semibold text-blue-800 hover:text-blue-600">
+            Register
           </Link>
-          <Link
-            href="/register/teacher"
-            className="rounded-2xl border border-blue-200 px-4 py-3 text-sm font-semibold text-blue-900 transition hover:border-blue-400 hover:bg-blue-50"
-          >
-            Register as Teacher
-          </Link>
-        </div>
+        </p>
       </div>
     </form>
   );

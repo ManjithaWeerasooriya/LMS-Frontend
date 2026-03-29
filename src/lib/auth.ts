@@ -3,7 +3,7 @@ import { getDeviceId } from '@/lib/device';
 import axios, { isAxiosError } from 'axios';
 
 export type UserRole = 'Student' | 'Instructor' | 'Admin';
-export type RegistrationRole = 'Student' | 'Teacher';
+export type RegistrationRole = 'Student';
 
 export interface RegisterPayload {
   email: string;
