@@ -1,0 +1,331 @@
+/* tslint:disable */
+/**
+ * This file is auto-generated from docs/api/swagger.json.
+ * Do not edit manually. Run `npm run generate:api-types` instead.
+ */
+
+export type AttendanceStatisticsDto = {
+  "upcomingSessions"?: number;
+  "completedSessionsLast30Days"?: number;
+  "attendanceRate"?: number | null;
+  "attendanceTrackingAvailable"?: boolean;
+  "attendanceTrackingNote"?: string | null;
+  "upcomingSessionDetails"?: Array<LiveSessionSummaryDto> | null;
+};
+
+export type ChangePasswordRequest = {
+  "currentPassword": string;
+  "newPassword": string;
+};
+
+export type CourseCompletionRateItemDto = {
+  "courseId"?: string;
+  "courseTitle"?: string | null;
+  "completionRate"?: number;
+};
+
+export type CourseDetailDto = {
+  "id"?: string;
+  "title"?: string | null;
+  "category"?: string | null;
+  "description"?: string | null;
+  "durationHours"?: number;
+  "price"?: number;
+  "maxStudents"?: number;
+  "difficultyLevel"?: string | null;
+  "prerequisites"?: string | null;
+  "status"?: string | null;
+};
+
+export type CourseEnrollmentStatDto = {
+  "courseId"?: string;
+  "courseTitle"?: string | null;
+  "studentCount"?: number;
+  "averageProgressPercent"?: number;
+  "status"?: string | null;
+};
+
+export type CourseListItemDto = {
+  "id"?: string;
+  "title"?: string | null;
+  "category"?: string | null;
+  "instructorName"?: string | null;
+  "students"?: number;
+  "price"?: number;
+  "rating"?: number | null;
+  "status"?: string | null;
+};
+
+export type CourseListItemDtoPagedResult = {
+  "pageNumber"?: number;
+  "pageSize"?: number;
+  "totalCount"?: number;
+  "items"?: Array<CourseListItemDto> | null;
+};
+
+export type CoursesReportDto = {
+  "enrollment"?: EnrollmentStatisticsDto;
+  "completionRates"?: Array<CourseCompletionRateItemDto> | null;
+};
+
+export type CreateCourseRequestDto = {
+  "title": string;
+  "category"?: string | null;
+  "description"?: string | null;
+  "durationHours"?: number;
+  "price"?: number;
+  "maxStudents"?: number;
+  "difficultyLevel"?: string | null;
+  "prerequisites"?: string | null;
+  "status"?: string | null;
+};
+
+export type CreateQuizDto = {
+  "courseId": string;
+  "title": string;
+  "durationMinutes"?: number;
+  "totalMarks"?: number;
+  "passingMarks"?: number;
+  "isPublished"?: boolean;
+};
+
+export type EnrollmentGrowthPointDto = {
+  "year"?: number;
+  "month"?: number;
+  "enrollments"?: number;
+};
+
+export type EnrollmentStatisticsDto = {
+  "totalEnrollments"?: number;
+  "totalStudents"?: number;
+  "enrollmentByCourse"?: Array<CourseEnrollmentStatDto> | null;
+  "monthlyGrowth"?: Array<EnrollmentGrowthPointDto> | null;
+};
+
+export type ForgotPasswordRequest = {
+  "email": string;
+};
+
+export type LiveClassListItemDto = {
+  "id"?: string;
+  "topic"?: string | null;
+  "courseTitle"?: string | null;
+  "scheduledAt"?: string;
+  "studentsEnrolled"?: number;
+  "meetingLink"?: string | null;
+};
+
+export type LiveSessionSummaryDto = {
+  "liveClassId"?: string;
+  "topic"?: string | null;
+  "scheduledAt"?: string;
+  "courseTitle"?: string | null;
+  "studentsEnrolled"?: number;
+  "meetingLink"?: string | null;
+};
+
+export type LoginRequest = {
+  "email"?: string | null;
+  "password"?: string | null;
+  "deviceId"?: string | null;
+};
+
+export type LogoutRequest = {
+  "refreshToken"?: string | null;
+  "deviceId"?: string | null;
+};
+
+export type PerformanceBandDto = {
+  "excellentPercentage"?: number;
+  "goodPercentage"?: number;
+  "averagePercentage"?: number;
+  "needsImprovementPercentage"?: number;
+};
+
+export type QuizAverageScoreDto = {
+  "quizId"?: string;
+  "quizTitle"?: string | null;
+  "courseTitle"?: string | null;
+  "averageScorePercent"?: number;
+  "attempts"?: number;
+};
+
+export type QuizResponseDto = {
+  "id"?: string;
+  "courseId"?: string;
+  "title"?: string | null;
+  "durationMinutes"?: number;
+  "totalMarks"?: number;
+  "passingMarks"?: number;
+  "isPublished"?: boolean;
+  "createdAt"?: string;
+};
+
+export type QuizStatisticsDto = {
+  "totalAttempts"?: number;
+  "averageScorePercent"?: number;
+  "averageScorePerQuiz"?: Array<QuizAverageScoreDto> | null;
+  "performanceBands"?: PerformanceBandDto;
+};
+
+export type RefreshRequest = {
+  "refreshToken"?: string | null;
+  "deviceId"?: string | null;
+};
+
+export type RegisterRequest = {
+  "email"?: string | null;
+  "password"?: string | null;
+  "firstName"?: string | null;
+  "lastName"?: string | null;
+  "role"?: string | null;
+};
+
+export type ReportOverviewDto = {
+  "enrollment"?: EnrollmentStatisticsDto;
+  "quizzes"?: QuizStatisticsDto;
+  "attendance"?: AttendanceStatisticsDto;
+};
+
+export type ResetPasswordRequest = {
+  "userId": string;
+  "token": string;
+  "newPassword": string;
+  "confirmPassword": string;
+};
+
+export type ScheduleLiveClassRequestDto = {
+  "topic": string;
+  "courseId"?: string | null;
+  "scheduledAt": string;
+  "meetingLink"?: string | null;
+  "enableRecording"?: boolean;
+  "durationMinutes"?: number | null;
+};
+
+export type StudentCourseListItemDto = {
+  "id"?: string;
+  "title"?: string | null;
+  "category"?: string | null;
+  "instructorName"?: string | null;
+  "studentsEnrolled"?: number;
+  "price"?: number;
+  "rating"?: number | null;
+  "isEnrolled"?: boolean;
+};
+
+export type StudentDashboardCourseItemDto = {
+  "courseId"?: string;
+  "title"?: string | null;
+  "instructorName"?: string | null;
+  "progressPercent"?: number;
+};
+
+export type StudentDashboardLiveClassItemDto = {
+  "liveClassId"?: string;
+  "topic"?: string | null;
+  "courseTitle"?: string | null;
+  "scheduledAt"?: string;
+  "durationMinutes"?: number | null;
+};
+
+export type StudentDashboardQuizItemDto = {
+  "quizId"?: string;
+  "title"?: string | null;
+  "courseTitle"?: string | null;
+  "durationMinutes"?: number;
+};
+
+export type StudentDashboardResponseDto = {
+  "summary"?: StudentDashboardSummaryDto;
+  "myCourses"?: Array<StudentDashboardCourseItemDto> | null;
+  "upcomingClasses"?: Array<StudentDashboardLiveClassItemDto> | null;
+  "pendingQuizzes"?: Array<StudentDashboardQuizItemDto> | null;
+};
+
+export type StudentDashboardSummaryDto = {
+  "enrolledCourses"?: number;
+  "upcomingClasses"?: number;
+  "pendingQuizzes"?: number;
+};
+
+export type SuspendUserDto = {
+  "userId"?: string | null;
+  "reason"?: string | null;
+};
+
+export type TeacherDashboardCourseItemDto = {
+  "courseId"?: string;
+  "title"?: string | null;
+  "students"?: number;
+  "averageProgressPercent"?: number;
+  "status"?: string | null;
+};
+
+export type TeacherDashboardLiveSessionItemDto = {
+  "liveClassId"?: string;
+  "topic"?: string | null;
+  "scheduledAt"?: string;
+  "courseTitle"?: string | null;
+  "studentsEnrolled"?: number;
+  "meetingLink"?: string | null;
+};
+
+export type TeacherDashboardPerformanceDto = {
+  "excellentPercentage"?: number;
+  "goodPercentage"?: number;
+  "averagePercentage"?: number;
+  "needsImprovementPercentage"?: number;
+};
+
+export type TeacherDashboardResponseDto = {
+  "summary"?: TeacherDashboardSummaryDto;
+  "myCourses"?: Array<TeacherDashboardCourseItemDto> | null;
+  "performance"?: TeacherDashboardPerformanceDto;
+  "completionRates"?: Array<CourseCompletionRateItemDto> | null;
+  "upcomingLiveSessions"?: Array<TeacherDashboardLiveSessionItemDto> | null;
+  "pendingSubmissions"?: Array<TeacherDashboardSubmissionItemDto> | null;
+};
+
+export type TeacherDashboardSubmissionItemDto = {
+  "assignmentId"?: string;
+  "assignmentTitle"?: string | null;
+  "courseTitle"?: string | null;
+  "dueDate"?: string;
+  "pendingCount"?: number;
+  "totalCount"?: number;
+};
+
+export type TeacherDashboardSummaryDto = {
+  "myCourses"?: number;
+  "totalStudents"?: number;
+  "pendingSubmissions"?: number;
+  "upcomingLiveSessions"?: number;
+};
+
+export type UpdateMyProfileRequest = {
+  "firstName"?: string | null;
+  "lastName"?: string | null;
+  "phone"?: string | null;
+};
+
+export type UpdateQuizDto = {
+  "title": string;
+  "durationMinutes"?: number;
+  "totalMarks"?: number;
+  "passingMarks"?: number;
+  "isPublished"?: boolean;
+};
+
+export type UserProfileRequest = {
+  "id"?: string | null;
+  "email"?: string | null;
+  "firstName"?: string | null;
+  "lastName"?: string | null;
+  "phone"?: string | null;
+  "status"?: UserStatus;
+  "createdAt"?: string;
+  "lastLoginAt"?: string | null;
+};
+
+export type UserStatus = 1 | 3;
