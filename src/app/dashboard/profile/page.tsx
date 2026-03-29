@@ -1,9 +1,9 @@
 'use client';
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import TeacherDashboardLayout from '@/app/teacher/dashboard/layout';
-import { decodeJwt, getStoredAuthToken, logoutUser } from '@/lib/auth';
+import { logoutUser } from '@/lib/auth';
 import { getMyProfile, requestPasswordReset, updateMyProfile, UserApiError, type UserProfile } from '@/lib/user';
 
 export function ProfileContent() {
@@ -18,16 +18,6 @@ export function ProfileContent() {
   const [resetMessage, setResetMessage] = useState<string>('');
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-
-  const roleLabel = useMemo(() => {
-    const token = getStoredAuthToken();
-    const payload = decodeJwt(token);
-    if (!payload) {
-      return 'Unknown';
-    }
-    const role = payload.role || (payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] as string | undefined);
-    return role ?? 'Unknown';
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -199,22 +189,6 @@ export function ProfileContent() {
                   disabled={!isEditing}
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                 />
-              </label>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="space-y-1 text-sm font-medium text-slate-700">
-                Email
-                <input
-                  type="email"
-                  value={profile?.email ?? ''}
-                  readOnly
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-2 text-slate-500"
-                />
-              </label>
-              <label className="space-y-1 text-sm font-medium text-slate-700">
-                Role
-                <input type="text" value={roleLabel} readOnly className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-2 text-slate-500" />
               </label>
             </div>
 

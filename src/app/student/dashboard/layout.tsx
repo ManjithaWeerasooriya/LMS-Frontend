@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BarChart3, LogOut, Menu, PanelLeftClose, type LucideIcon } from 'lucide-react';
+import { BarChart3, LogOut, Menu, PanelLeftClose, Settings, type LucideIcon } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
@@ -23,6 +23,7 @@ type SidebarLink = {
 
 const sidebarLinks: SidebarLink[] = [
   { label: 'Dashboard', href: '/student/dashboard', icon: BarChart3 },
+  { label: 'Settings', href: '/student/dashboard/settings', icon: Settings },
 ];
 
 const getRoleClaim = (payload: DecodedJwt | null): string | undefined => {

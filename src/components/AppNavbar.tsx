@@ -60,7 +60,7 @@ const getDisplayName = (token: string | null): string | null => {
 
 const getUserHomeHref = (role: UserRole) => {
   if (role === 'Student') {
-    return '/student/dashboard';
+    return '/student/dashboard/settings';
   }
 
   return '/teacher/dashboard/settings';
