@@ -11,7 +11,17 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/dashboard/student/:path*',
-        destination: '/student/dashboard',
+        destination: '/student/dashboard/:path*',
+        permanent: false,
+      },
+      {
+        source: '/dashboard/profile',
+        destination: '/teacher/dashboard/settings',
+        permanent: false,
+      },
+      {
+        source: '/dashboard/profile/:path*',
+        destination: '/teacher/dashboard/settings',
         permanent: false,
       },
       {

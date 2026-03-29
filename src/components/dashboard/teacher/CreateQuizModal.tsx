@@ -34,7 +34,7 @@ export function CreateQuizModal({ open, onClose }: CreateQuizModalProps) {
           setForm((prev) => ({ ...prev, courseId: allCourses[0].id }));
         }
       } catch {
-        // ignore for now – we fall back to a free-text course field
+        // Ignore for now. The form falls back to a free-text course field.
       }
     };
 

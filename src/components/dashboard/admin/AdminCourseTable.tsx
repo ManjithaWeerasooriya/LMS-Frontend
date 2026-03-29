@@ -76,7 +76,8 @@ export function AdminCourseTable({
                 const pillClass = statusClasses[normalizedStatus] ?? 'bg-slate-100 text-slate-600';
                 const disableBusy = actionState?.courseId === course.id && actionState.type === 'disable';
                 const deleteBusy = actionState?.courseId === course.id && actionState.type === 'delete';
-                const disableDisabled = normalizedStatus === 'disabled' || normalizedStatus === 'archived' || disableBusy;
+                const disableDisabled =
+                  normalizedStatus === 'disabled' || normalizedStatus === 'archived' || disableBusy;
                 const enrollmentDisplay =
                   typeof course.enrollmentCount === 'number'
                     ? course.enrollmentCount.toLocaleString()

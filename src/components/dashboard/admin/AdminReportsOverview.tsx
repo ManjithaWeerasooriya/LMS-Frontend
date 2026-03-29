@@ -25,7 +25,7 @@ export function AdminReportsOverview({ data, loading, error }: AdminReportsOverv
         </div>
         {error ? <p className="text-sm font-semibold text-rose-600">{error}</p> : null}
       </div>
-      <div className="mt-6 grid gap-4 lg:grid-cols-4 sm:grid-cols-2">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {placeholders.map((metric) => {
           const value = data ? (data as Record<string, unknown>)[metric.key] : null;
           const formatted =

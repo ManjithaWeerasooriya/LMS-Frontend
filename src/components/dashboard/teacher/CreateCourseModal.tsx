@@ -262,7 +262,7 @@ export function CreateCourseModal({
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end gap-3">
+          <div className="mt-4 flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
@@ -273,16 +273,10 @@ export function CreateCourseModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !form.title.trim()}
+              disabled={isSubmitting}
               className="inline-flex items-center justify-center rounded-2xl bg-[#1B3B8B] px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-[#17306f] disabled:cursor-not-allowed disabled:bg-slate-300"
             >
-              {isSubmitting
-                ? mode === 'edit'
-                  ? 'Saving…'
-                  : 'Creating…'
-                : mode === 'edit'
-                ? 'Save Changes'
-                : 'Create Course'}
+              {isSubmitting ? (mode === 'edit' ? 'Saving…' : 'Creating…') : mode === 'edit' ? 'Save Changes' : 'Create Course'}
             </button>
           </div>
         </form>
@@ -290,4 +284,3 @@ export function CreateCourseModal({
     </div>
   );
 }
-

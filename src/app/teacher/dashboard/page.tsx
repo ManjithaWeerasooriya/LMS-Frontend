@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, BookOpenCheck, FileBarChart2, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import LegacyTeacherDashboardPage from '@/app/dashboard/teacher/page';
-import { AdminReportsOverview } from '@/app/dashboard/admin/_components/AdminReportsOverview';
+import { AdminReportsOverview } from '@/components/dashboard/admin/AdminReportsOverview';
+import { TeacherDashboardHome } from '@/components/dashboard/teacher/TeacherDashboardHome';
 import { AdminApiError, getAdminOverviewReport, type AdminOverviewReport } from '@/lib/admin';
 import { logoutUser } from '@/lib/auth';
 
@@ -83,7 +83,7 @@ export default function TeacherDashboardPage() {
 
   return (
     <div className="space-y-10">
-      <LegacyTeacherDashboardPage />
+      <TeacherDashboardHome />
 
       <section className="space-y-6">
         <header className="space-y-2">

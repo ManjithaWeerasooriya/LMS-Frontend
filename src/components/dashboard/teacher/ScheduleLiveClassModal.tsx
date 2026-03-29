@@ -10,7 +10,11 @@ export type ScheduleLiveClassModalProps = {
   onScheduled?: () => void;
 };
 
-export function ScheduleLiveClassModal({ open, onClose, onScheduled }: ScheduleLiveClassModalProps) {
+export function ScheduleLiveClassModal({
+  open,
+  onClose,
+  onScheduled,
+}: ScheduleLiveClassModalProps) {
   const [form, setForm] = useState<ScheduleLiveClassInput>({
     topic: '',
     date: '',

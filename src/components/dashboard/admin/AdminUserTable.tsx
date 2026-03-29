@@ -35,7 +35,16 @@ const formatDate = (date: string) => {
 
 const normalize = (value: string | null | undefined) => value?.trim().toLowerCase() ?? '';
 
-export function AdminUserTable({ users, isLoading, currentUserId, actionState, onSuspend, onReactivate, onApprove, onReject }: AdminUserTableProps) {
+export function AdminUserTable({
+  users,
+  isLoading,
+  currentUserId,
+  actionState,
+  onSuspend,
+  onReactivate,
+  onApprove,
+  onReject,
+}: AdminUserTableProps) {
   const renderActions = (user: AdminUser) => {
     const role = normalize(user.role);
     const status = normalize(user.status);

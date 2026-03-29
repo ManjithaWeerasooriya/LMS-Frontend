@@ -1,5 +1,5 @@
-import { ProfileContent } from '@/app/dashboard/profile/page';
+import { ProfileSettings } from '@/components/settings/ProfileSettings';
 
 export default function TeacherSettingsPage() {
-  return <ProfileContent />;
+  return <ProfileSettings />;
 }

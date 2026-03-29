@@ -1,12 +1,18 @@
 'use client';
+
 import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import TeacherDashboardLayout from '@/app/teacher/dashboard/layout';
 import { logoutUser } from '@/lib/auth';
-import { getMyProfile, requestPasswordReset, updateMyProfile, UserApiError, type UserProfile } from '@/lib/user';
+import {
+  getMyProfile,
+  requestPasswordReset,
+  updateMyProfile,
+  UserApiError,
+  type UserProfile,
+} from '@/lib/user';
 
-export function ProfileContent() {
+export function ProfileSettings() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [formValues, setFormValues] = useState({ firstName: '', lastName: '' });
@@ -15,7 +21,7 @@ export function ProfileContent() {
   const [isEditing, setIsEditing] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [saveErrors, setSaveErrors] = useState<string[]>([]);
-  const [resetMessage, setResetMessage] = useState<string>('');
+  const [resetMessage, setResetMessage] = useState('');
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -222,17 +228,8 @@ export function ProfileContent() {
               {resetMessage ? <p className="text-sm text-slate-600">{resetMessage}</p> : null}
             </div>
           </section>
-
         </section>
       )}
     </div>
-  );
-}
-
-export default function ProfilePage() {
-  return (
-    <TeacherDashboardLayout>
-      <ProfileContent />
-    </TeacherDashboardLayout>
   );
 }
