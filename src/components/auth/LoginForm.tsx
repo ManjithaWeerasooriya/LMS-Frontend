@@ -65,9 +65,9 @@ export function LoginForm() {
     try {
       const { role } = await loginUser({ email, password });
       const redirectMap: Record<UserRole, string> = {
-        Student: '/dashboard/student',
-        Instructor: '/dashboard/teacher',
-        Admin: '/dashboard/admin',
+        Student: '/student/dashboard',
+        Instructor: '/teacher/dashboard',
+        Admin: '/teacher/dashboard',
       };
       router.push(role ? redirectMap[role] ?? '/dashboard' : '/dashboard');
     } catch (error) {

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import AdminLayout from '@/app/dashboard/admin/layout';
+import TeacherDashboardLayout from '@/app/teacher/dashboard/layout';
 import { useConfirm } from '@/context/ConfirmContext';
 import { logoutUser } from '@/lib/auth';
 import { requestAccountDeletion, UserApiError } from '@/lib/user';
@@ -132,8 +132,8 @@ function DeleteAccountContent() {
 
 export default function DeleteAccountPage() {
   return (
-    <AdminLayout>
+    <TeacherDashboardLayout>
       <DeleteAccountContent />
-    </AdminLayout>
+    </TeacherDashboardLayout>
   );
 }

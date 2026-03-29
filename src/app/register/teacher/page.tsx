@@ -135,7 +135,7 @@ export default function TeacherRegistrationPage() {
         <header className="text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#2f4ea2]">Share your expertise with Genuine English</p>
           <h1 className="mt-4 text-[36px] font-semibold text-slate-900">Teacher Registration</h1>
-          <p className="mt-3 text-base text-slate-500">Submit your details to request instructor access. Admin approval is required before you can teach.</p>
+          <p className="mt-3 text-base text-slate-500">Submit your details to request instructor access. Your tutor account must be activated before you can teach.</p>
         </header>
 
         {status.type === 'success' ? (

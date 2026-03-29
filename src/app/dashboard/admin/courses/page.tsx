@@ -143,8 +143,8 @@ export default function AdminCoursesPage() {
   return (
     <div className="space-y-6">
         <header className="space-y-2">
-          <p className="text-sm uppercase tracking-[0.4em] text-blue-600">Admin</p>
-          <h1 className="text-3xl font-semibold text-slate-900">Courses</h1>
+          <p className="text-sm uppercase tracking-[0.4em] text-blue-600">Tutor Management</p>
+          <h1 className="text-3xl font-semibold text-slate-900">Platform Courses</h1>
           <p className="text-sm text-slate-500">Review and moderate all courses on the platform.</p>
         </header>
 

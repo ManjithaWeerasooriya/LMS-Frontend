@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import AdminLayout from '@/app/dashboard/admin/layout';
+import TeacherDashboardLayout from '@/app/teacher/dashboard/layout';
 import { decodeJwt, getStoredAuthToken, logoutUser } from '@/lib/auth';
 import { getMyProfile, requestPasswordReset, updateMyProfile, UserApiError, type UserProfile } from '@/lib/user';
 
@@ -276,8 +276,8 @@ function ProfileContent() {
 
 export default function ProfilePage() {
   return (
-    <AdminLayout>
+    <TeacherDashboardLayout>
       <ProfileContent />
-    </AdminLayout>
+    </TeacherDashboardLayout>
   );
 }

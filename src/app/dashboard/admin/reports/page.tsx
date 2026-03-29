@@ -260,7 +260,7 @@ export default function AdminReportsPage() {
   return (
     <div className="space-y-6">
         <header className="space-y-2">
-          <p className="text-sm uppercase tracking-[0.4em] text-blue-600">Admin</p>
+          <p className="text-sm uppercase tracking-[0.4em] text-blue-600">Tutor Management</p>
           <h1 className="text-3xl font-semibold text-slate-900">System Reports</h1>
           <p className="text-sm text-slate-500">Monitor enrollments, completion, and quiz performance metrics.</p>
         </header>

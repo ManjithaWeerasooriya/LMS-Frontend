@@ -155,7 +155,7 @@ export default function TeacherDashboardPage() {
     // Navigate to the courses management page; in the future this
     // can be extended to deep-link to a specific course.
     if (!courseId) return;
-    router.push('/dashboard/teacher/courses');
+    router.push('/teacher/dashboard/courses');
   };
 
   const handleEditCourse = async (courseId: string) => {
@@ -173,10 +173,10 @@ export default function TeacherDashboardPage() {
     <div className="space-y-8">
       <header className="space-y-1">
         <p className="text-sm uppercase tracking-[0.4em] text-blue-700">
-          Instructor Dashboard
+          Teacher Dashboard
         </p>
         <h1 className="text-3xl font-semibold text-slate-900">
-          Instructor Dashboard
+          Teacher Dashboard
         </h1>
         <p className="text-sm text-slate-500">
           Manage your courses and track student performance.

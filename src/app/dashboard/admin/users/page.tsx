@@ -207,9 +207,9 @@ export default function AdminUserManagementPage() {
     <div className="min-h-screen bg-slate-100 px-4 py-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <header>
-          <p className="text-sm uppercase tracking-[0.4em] text-blue-600">Admin</p>
+          <p className="text-sm uppercase tracking-[0.4em] text-blue-600">Tutor Management</p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-900">User Management</h1>
-          <p className="mt-1 text-sm text-slate-500">Review user accounts, approve pending teachers, and manage access policies.</p>
+          <p className="mt-1 text-sm text-slate-500">Review user accounts, activate teachers, and manage access policies.</p>
         </header>
 
         {toast ? (
