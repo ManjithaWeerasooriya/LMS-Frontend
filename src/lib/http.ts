@@ -2,6 +2,7 @@ import axios, { AxiosHeaders, isAxiosError, type AxiosError, type InternalAxiosR
 
 import { apiConfig } from '@/lib/config';
 import {
+  AUTH_STATE_CHANGE_EVENT,
   clearStoredAuth,
   decodeJwt,
   decodeJwtHeader,
@@ -109,6 +110,8 @@ const storeAuthTokens = (payload: RefreshResponse) => {
     refreshClient.defaults.headers.common.Authorization = bearer;
     console.log('[refreshAuthToken] Updated axios default Authorization header.');
   }
+
+  window.dispatchEvent(new Event(AUTH_STATE_CHANGE_EVENT));
 };
 
 const refreshAuthToken = async (): Promise<string> => {

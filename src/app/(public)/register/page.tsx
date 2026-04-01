@@ -1,17 +1,25 @@
 import Link from 'next/link';
 
 import { AuthCard } from '@/components/auth/AuthCard';
+import { withRedirect } from '@/lib/navigation';
 
-const registrationOptions = [
-  {
-    href: '/register/student',
-    title: 'Student Registration',
-    description: 'Join courses, submit assignments, and track your progress in one place.',
-    cta: 'Register as Student',
-  },
-];
+export default async function RegisterLandingPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ redirect?: string }>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const redirect = resolvedSearchParams?.redirect;
 
-export default function RegisterLandingPage() {
+  const registrationOptions = [
+    {
+      href: withRedirect('/register/student', redirect),
+      title: 'Student Registration',
+      description: 'Join courses, submit assignments, and track your progress in one place.',
+      cta: 'Register as Student',
+    },
+  ];
+
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-10">
       <div className="mx-auto flex max-w-5xl justify-center">
@@ -39,7 +47,7 @@ export default function RegisterLandingPage() {
 
           <div className="mt-6 text-center">
             <Link
-              href="/login"
+              href={withRedirect('/login', redirect)}
               className="text-sm font-semibold text-blue-800 hover:text-blue-600"
             >
               Already have an account? Sign in

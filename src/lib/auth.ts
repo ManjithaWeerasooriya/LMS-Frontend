@@ -4,6 +4,7 @@ import axios, { isAxiosError } from 'axios';
 
 export type UserRole = 'Student' | 'Instructor' | 'Admin';
 export type RegistrationRole = 'Student';
+export const AUTH_STATE_CHANGE_EVENT = 'auth-state-change';
 
 export interface RegisterPayload {
   email: string;
@@ -52,6 +53,15 @@ export interface LoginResult {
   role?: UserRole;
 }
 
+export interface AuthSession {
+  token: string | null;
+  refreshToken: string | null;
+  role: UserRole | null;
+  isAuthenticated: boolean;
+  userId: string | null;
+  name: string | null;
+}
+
 type ApiLoginResponse = {
   accessToken?: string;
   refreshToken?: string;
@@ -72,6 +82,24 @@ function normalizeRole(role?: string | null): UserRole | undefined {
   if (normalized === 'admin') return 'Admin';
   if (normalized === 'teacher' || normalized === 'instructor') return 'Instructor';
   return undefined;
+}
+
+function getJwtStringClaim(payload: DecodedJwt | null, keys: string[]): string | null {
+  if (!payload) return null;
+
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return null;
+}
+
+function notifyAuthStateChange() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(AUTH_STATE_CHANGE_EVENT));
 }
 
 export class LoginError extends Error {
@@ -165,6 +193,8 @@ export async function loginUser({ email, password }: LoginParams): Promise<Login
       if (normalizedRole) {
         localStorage.setItem('userRole', normalizedRole);
       }
+
+      notifyAuthStateChange();
     }
 
     return {
@@ -218,9 +248,32 @@ export function getStoredUserRole(): UserRole | null {
   return normalized ?? null;
 }
 
+export function getStoredAuthSession(): AuthSession {
+  const token = getStoredAuthToken();
+  const refreshToken = getStoredRefreshToken();
+  const role = getStoredUserRole();
+  const payload = decodeJwt(token);
+
+  return {
+    token,
+    refreshToken,
+    role,
+    isAuthenticated: Boolean(token),
+    userId: getJwtStringClaim(payload, ['sub', 'nameid', 'nameidentifier', 'userId']),
+    name: getJwtStringClaim(payload, [
+      'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name',
+      'name',
+      'unique_name',
+      'email',
+      'sub',
+    ]),
+  };
+}
+
 export function clearStoredAuth(): void {
   if (typeof window === 'undefined') return;
   AUTH_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key));
+  notifyAuthStateChange();
 }
 
 function decodeBase64Url(input: string): string {

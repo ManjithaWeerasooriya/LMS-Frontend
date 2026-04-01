@@ -4,7 +4,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 
-import { decodeJwt, getStoredAuthToken, getStoredUserRole, type UserRole } from '@/lib/auth';
+import {
+  AUTH_STATE_CHANGE_EVENT,
+  getStoredAuthSession,
+  type UserRole,
+} from '@/lib/auth';
 
 type NavbarLink = {
   href: string;
@@ -36,28 +40,6 @@ const isActiveLink = (pathname: string, href: string) => {
   return pathname === href || pathname.startsWith(`${href}/`);
 };
 
-const getDisplayName = (token: string | null): string | null => {
-  const payload = decodeJwt(token);
-  if (!payload) return null;
-
-  const keys = [
-    'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name',
-    'name',
-    'unique_name',
-    'email',
-    'sub',
-  ];
-
-  for (const key of keys) {
-    const value = payload[key];
-    if (typeof value === 'string' && value.trim()) {
-      return value;
-    }
-  }
-
-  return null;
-};
-
 const getUserHomeHref = (role: UserRole) => {
   if (role === 'Student') {
     return '/student/dashboard/settings';
@@ -77,11 +59,11 @@ export function AppNavbar({
 
   useEffect(() => {
     const syncUser = () => {
-      const token = getStoredAuthToken();
-      const role = getStoredUserRole();
-      const name = getDisplayName(token);
+      const session = getStoredAuthSession();
+      const role = session.role;
+      const name = session.name;
 
-      if (!token || !role || !name) {
+      if (!session.token || !role || !name) {
         setUser(null);
         return;
       }
@@ -91,9 +73,11 @@ export function AppNavbar({
 
     syncUser();
     window.addEventListener('storage', syncUser);
+    window.addEventListener(AUTH_STATE_CHANGE_EVENT, syncUser);
 
     return () => {
       window.removeEventListener('storage', syncUser);
+      window.removeEventListener(AUTH_STATE_CHANGE_EVENT, syncUser);
     };
   }, []);
 
