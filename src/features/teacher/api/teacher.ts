@@ -297,17 +297,18 @@ export type CreateQuizInput = {
   courseId: string;
   durationMinutes: number;
   totalMarks: number;
-  passingMarks: number;
+  description?: string;
 };
 
 export async function createQuiz(input: CreateQuizInput): Promise<void> {
   const payload: CreateQuizDto = {
     title: input.title.trim(),
     courseId: input.courseId,
+    description: input.description?.trim() || null,
     durationMinutes: input.durationMinutes,
     totalMarks: input.totalMarks,
-    passingMarks: input.passingMarks,
     isPublished: false,
+    areResultsPublished: false,
   };
 
   await apiClient.post('/api/v1/teacher/quizzes', payload);

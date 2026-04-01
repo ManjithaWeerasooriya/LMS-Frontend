@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { ErrorAlert } from '@/components/ErrorAlert';
 import { FormInput } from '@/components/auth/FormInput';
 import { PrimaryButton } from '@/components/auth/PrimaryButton';
 import { LoginError, loginUser, type UserRole } from '@/lib/auth';
+import { getSafeRedirectPath, withRedirect } from '@/lib/navigation';
 
 type FieldErrors = Partial<Record<'email' | 'password', string>>;
 
@@ -28,12 +29,14 @@ const LockIcon = () => (
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const redirect = getSafeRedirectPath(searchParams.get('redirect'), '');
 
   const validateFields = () => {
     const errors: FieldErrors = {};
@@ -69,7 +72,8 @@ export function LoginForm() {
         Instructor: '/teacher/dashboard',
         Admin: '/teacher/dashboard',
       };
-      router.push(role ? redirectMap[role] ?? '/dashboard' : '/dashboard');
+      router.push(redirect || (role ? redirectMap[role] ?? '/dashboard' : '/dashboard'));
+      router.refresh();
     } catch (error) {
       if (error instanceof LoginError) {
         setFormError(error.message);
@@ -133,7 +137,10 @@ export function LoginForm() {
       <div className="text-center">
         <p className="text-sm text-slate-500">
           Don’t have an account?{' '}
-          <Link href="/register/student" className="font-semibold text-blue-800 hover:text-blue-600">
+          <Link
+            href={withRedirect('/register/student', redirect)}
+            className="font-semibold text-blue-800 hover:text-blue-600"
+          >
             Register
           </Link>
         </p>

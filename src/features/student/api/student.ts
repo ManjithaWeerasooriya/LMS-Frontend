@@ -1,5 +1,5 @@
 import { apiClient, isAxiosAuthError } from '@/lib/http';
-import type { StudentDashboardResponseDto } from '@/generated/api-types';
+import type { StudentCourseListItemDto, StudentDashboardResponseDto } from '@/generated/api-types';
 
 export type StudentDashboardSummary = {
   enrolledCourses: number;
@@ -27,6 +27,17 @@ export type StudentDashboardQuiz = {
   title: string;
   courseTitle: string | null;
   durationMinutes: number;
+};
+
+export type StudentCourseListItem = {
+  id: string;
+  title: string;
+  category: string | null;
+  instructorName: string | null;
+  studentsEnrolled: number | null;
+  price: number | null;
+  rating: number | null;
+  isEnrolled: boolean;
 };
 
 export class StudentApiError extends Error {
@@ -75,6 +86,49 @@ export async function getStudentDashboard(): Promise<{
         durationMinutes: typeof quiz.durationMinutes === 'number' ? quiz.durationMinutes : 0,
       })),
     };
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
+}
+
+function normalizeStudentCourse(course: StudentCourseListItemDto): StudentCourseListItem {
+  return {
+    id: course.id ?? '',
+    title: course.title?.trim() || 'Untitled Course',
+    category: course.category?.trim() || null,
+    instructorName: course.instructorName?.trim() || null,
+    studentsEnrolled:
+      typeof course.studentsEnrolled === 'number' ? course.studentsEnrolled : null,
+    price: typeof course.price === 'number' ? course.price : null,
+    rating: typeof course.rating === 'number' ? course.rating : null,
+    isEnrolled: Boolean(course.isEnrolled),
+  };
+}
+
+export async function getStudentCourses(search?: string): Promise<StudentCourseListItem[]> {
+  try {
+    const { data } = await apiClient.get<StudentCourseListItemDto[]>('/api/v1/student/courses', {
+      params: search?.trim() ? { search: search.trim() } : undefined,
+    });
+
+    return (data ?? []).map(normalizeStudentCourse).filter((course) => course.id);
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
+}
+
+export async function getMyStudentCourses(): Promise<StudentCourseListItem[]> {
+  try {
+    const { data } = await apiClient.get<StudentCourseListItemDto[]>('/api/v1/student/courses/my');
+    return (data ?? []).map(normalizeStudentCourse).filter((course) => course.id);
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
+}
+
+export async function enrollInStudentCourse(courseId: string): Promise<void> {
+  try {
+    await apiClient.post(`/api/v1/student/courses/${courseId}/enroll`);
   } catch (error) {
     throw convertAxiosError(error);
   }

@@ -21,7 +21,7 @@ export function CreateQuizModal({ open, onClose }: CreateQuizModalProps) {
     courseId: '',
     durationMinutes: 30,
     totalMarks: 100,
-    passingMarks: 60,
+    description: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -79,8 +79,7 @@ export function CreateQuizModal({ open, onClose }: CreateQuizModalProps) {
     form.title.trim() &&
     form.courseId &&
     form.durationMinutes > 0 &&
-    form.totalMarks > 0 &&
-    form.passingMarks > 0;
+    form.totalMarks > 0;
 
   return (
     <div
@@ -124,6 +123,20 @@ export function CreateQuizModal({ open, onClose }: CreateQuizModalProps) {
           </div>
 
           <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-700" htmlFor="quiz-description">
+              Description
+            </label>
+            <textarea
+              id="quiz-description"
+              rows={3}
+              value={form.description ?? ''}
+              onChange={(event) => handleChange('description', event.target.value)}
+              className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none ring-0 transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              placeholder="Add optional quiz instructions"
+            />
+          </div>
+
+          <div className="space-y-2">
             <label className="text-xs font-semibold text-slate-700" htmlFor="quiz-course">
               Course
             </label>
@@ -152,7 +165,7 @@ export function CreateQuizModal({ open, onClose }: CreateQuizModalProps) {
             )}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <label className="text-xs font-semibold text-slate-700" htmlFor="quiz-duration">
                 Duration (minutes)
@@ -183,21 +196,6 @@ export function CreateQuizModal({ open, onClose }: CreateQuizModalProps) {
                 className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none ring-0 transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-700" htmlFor="quiz-passing-marks">
-                Passing Marks
-              </label>
-              <input
-                id="quiz-passing-marks"
-                type="number"
-                min={1}
-                value={form.passingMarks}
-                onChange={(event) =>
-                  handleChange('passingMarks', Number(event.target.value) || 0)
-                }
-                className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none ring-0 transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
           </div>
 
           <div className="border-t border-slate-200 pt-4">
@@ -205,8 +203,8 @@ export function CreateQuizModal({ open, onClose }: CreateQuizModalProps) {
               Questions
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Question authoring will be added once backend quiz endpoints are ready. For now, you
-              can create quiz shells linked to your courses.
+              Question authoring now lives in the course quiz editor. Create the quiz, then open it
+              from the course quiz list to add questions and review submissions.
             </p>
           </div>
 
