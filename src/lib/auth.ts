@@ -62,6 +62,15 @@ export interface AuthSession {
   name: string | null;
 }
 
+export const EMPTY_AUTH_SESSION: AuthSession = {
+  token: null,
+  refreshToken: null,
+  role: null,
+  isAuthenticated: false,
+  userId: null,
+  name: null,
+};
+
 type ApiLoginResponse = {
   accessToken?: string;
   refreshToken?: string;
@@ -255,6 +264,7 @@ export function getStoredAuthSession(): AuthSession {
   const payload = decodeJwt(token);
 
   return {
+    ...EMPTY_AUTH_SESSION,
     token,
     refreshToken,
     role,

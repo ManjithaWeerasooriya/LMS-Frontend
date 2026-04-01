@@ -2,10 +2,15 @@
 
 import { useEffect, useState } from 'react';
 
-import { AUTH_STATE_CHANGE_EVENT, getStoredAuthSession, type AuthSession } from '@/lib/auth';
+import {
+  AUTH_STATE_CHANGE_EVENT,
+  EMPTY_AUTH_SESSION,
+  getStoredAuthSession,
+  type AuthSession,
+} from '@/lib/auth';
 
 export function useAuthSession() {
-  const [session, setSession] = useState<AuthSession>(() => getStoredAuthSession());
+  const [session, setSession] = useState<AuthSession>(EMPTY_AUTH_SESSION);
 
   useEffect(() => {
     const syncSession = () => {
