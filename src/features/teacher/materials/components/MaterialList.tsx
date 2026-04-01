@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, type ReactElement } from 'react';
 import { Download, FileText, Video } from 'lucide-react';
 
 import type { CourseMaterial, MaterialType } from '@/features/teacher/materials/api/materials';
@@ -19,7 +19,7 @@ const materialTypeLabel: Record<MaterialType, string> = {
   other: 'Other',
 };
 
-const iconByType: Record<MaterialType, JSX.Element> = {
+const iconByType: Record<MaterialType, ReactElement> = {
   pdf: <FileText className="h-4 w-4" />,
   video: <Video className="h-4 w-4" />,
   assignment: <FileText className="h-4 w-4" />,
@@ -113,7 +113,7 @@ export function MaterialList({ materials, role, onDownload }: MaterialListProps)
                     <div className="flex items-center justify-end gap-2">
                       {canView ? (
                         <a
-                          href={material.fileUrl}
+                          href={material.fileUrl ?? undefined}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center rounded-2xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-800"

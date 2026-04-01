@@ -80,26 +80,30 @@ export async function uploadMaterial(courseId: string, file: File, title?: strin
     const payload = new FormData();
     payload.append('courseId', courseId);
     payload.append('file', file);
+
     if (title?.trim()) {
       payload.append('title', title.trim());
     }
 
-    const { data } = await apiClient.post<MaterialDto>(`${MATERIALS_BASE}/upload`, payload);
-    return toCourseMaterial(data ?? {});
+    const response = await apiClient.post<MaterialDto>(`${MATERIALS_BASE}/upload`, payload);
+
+    return toCourseMaterial(response.data);
   } catch (error) {
-    convertAxiosError(error);
+    throw convertAxiosError(error);
   }
 }
 
 export async function getCourseMaterials(courseId: string): Promise<CourseMaterial[]> {
   try {
     const { data } = await apiClient.get<MaterialDto[]>(`${MATERIALS_BASE}/course/${courseId}`);
+
     if (!Array.isArray(data)) {
       return [];
     }
-    return data.map((item) => toCourseMaterial(item ?? {}));
+
+    return data.map(toCourseMaterial);
   } catch (error) {
-    convertAxiosError(error);
+    throw convertAxiosError(error);
   }
 }
 
