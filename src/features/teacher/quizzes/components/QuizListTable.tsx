@@ -61,16 +61,11 @@ export function QuizListTable({
               quizzes.map((quiz) => (
                 <tr key={quiz.id} className="align-top hover:bg-slate-50/70">
                   <td className="px-6 py-4">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold text-slate-900">{quiz.title}</p>
-                        <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                          {quiz.durationMinutes} min
-                        </span>
-                      </div>
-                      <p className="max-w-sm text-xs text-slate-500">
-                        {quiz.description || 'No quiz description provided.'}
-                      </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold text-slate-900">{quiz.title}</p>
+                      <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                        {quiz.durationMinutes} min
+                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-slate-600">
