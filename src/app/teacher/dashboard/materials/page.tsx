@@ -1,1 +1,1 @@
-export { default } from '@/features/teacher/pages/TeacherMaterialsPage';
+export { default } from '@/features/teacher/materials/pages/TeacherMaterialsPage';
