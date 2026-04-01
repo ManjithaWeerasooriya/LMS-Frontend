@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { Edit3, Trash2 } from 'lucide-react';
+import { Edit3, FileText, Trash2 } from 'lucide-react';
 
 import { CreateCourseModal } from '@/features/teacher/components/CreateCourseModal';
 import { useConfirm } from '@/context/ConfirmContext';
@@ -226,6 +227,13 @@ export default function TeacherCoursesPage() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3 text-slate-500">
+                            <Link
+                              href={`/teacher/dashboard/courses/${course.id}/quizzes`}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 transition transform hover:scale-105 hover:bg-slate-200"
+                              aria-label="Manage quizzes"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Link>
                             <button
                               type="button"
                               onClick={() => handleEditClick(course.id)}
