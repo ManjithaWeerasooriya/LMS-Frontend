@@ -75,14 +75,19 @@ export default function StudentDashboardLayout({ children }: { children: ReactNo
 
       const roleFromToken = getRoleClaim(payload)?.toLowerCase();
       const storedRole = getStoredUserRole();
-      const hasStudentRole = roleFromToken === 'student' || storedRole === 'Student';
+      const normalizedStoredRole = storedRole?.toLowerCase();
+      const hasStudentRole =
+        roleFromToken === 'student' || normalizedStoredRole === 'student';
 
       if (!hasStudentRole) {
         if (!cancelled) {
           setIsChecking(false);
         }
 
-        if (storedRole === 'Instructor' || storedRole === 'Admin') {
+        if (
+          normalizedStoredRole === 'instructor' ||
+          normalizedStoredRole === 'admin'
+        ) {
           router.replace('/teacher/dashboard');
         } else {
           router.replace('/login');
