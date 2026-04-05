@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { BookOpen, ClipboardList, MonitorPlay } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -164,6 +165,12 @@ export default function StudentDashboardPage() {
               <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Courses</p>
               <h2 className="mt-1 text-xl font-semibold text-slate-900">My Courses</h2>
             </div>
+            <Link
+              href="/student/dashboard/courses"
+              className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Open all
+            </Link>
           </div>
 
           <div className="mt-5 overflow-hidden rounded-3xl border border-slate-100">
@@ -192,7 +199,18 @@ export default function StudentDashboardPage() {
                   ) : (
                     state.myCourses.map((course) => (
                       <tr key={course.courseId || course.title}>
-                        <td className="px-4 py-3 font-semibold text-slate-900">{course.title}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-900">
+                          {course.courseId ? (
+                            <Link
+                              href={`/student/dashboard/courses/${course.courseId}`}
+                              className="transition hover:text-[#1B3B8B]"
+                            >
+                              {course.title}
+                            </Link>
+                          ) : (
+                            course.title
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-slate-700">{course.instructorName ?? '—'}</td>
                         <td className="px-4 py-3 text-slate-700">
                           <div className="flex items-center gap-3">
