@@ -206,6 +206,7 @@ export default function StudentCourseDetailPage({
           {content.weeks.map((week) => (
             <StudentCourseWeekSection
               key={week.key}
+              courseId={courseId}
               week={week}
               onDownloadMaterial={handleDownloadMaterial}
             />

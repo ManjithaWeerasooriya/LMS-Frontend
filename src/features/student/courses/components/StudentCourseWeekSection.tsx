@@ -1,11 +1,14 @@
 'use client';
 
+import Link from 'next/link';
 import { CalendarClock, ClipboardList, Clock3, Download, ExternalLink, FileText, FolderOpen } from 'lucide-react';
 
 import type { CourseMaterial } from '@/features/student/materials/api/materials';
 import type { StudentCourseQuiz, StudentCourseWeek } from '@/features/student/courses/api';
+import { isQuizInProgressStatus, isQuizSubmittedStatus } from '@/features/student/quizzes/api';
 
 type StudentCourseWeekSectionProps = {
+  courseId: string;
   week: StudentCourseWeek;
   onDownloadMaterial: (material: CourseMaterial) => Promise<void> | void;
 };
@@ -59,7 +62,32 @@ const formatAvailability = (quiz: StudentCourseQuiz) => {
   return 'Availability to be announced';
 };
 
+const getQuizActionLabel = (quiz: StudentCourseQuiz) => {
+  if (isQuizSubmittedStatus(quiz.status)) {
+    return 'View submission';
+  }
+
+  if (isQuizInProgressStatus(quiz.status)) {
+    return 'Continue quiz';
+  }
+
+  return 'Open quiz';
+};
+
+const getQuizStatusBadgeClass = (quiz: StudentCourseQuiz) => {
+  if (isQuizSubmittedStatus(quiz.status)) {
+    return 'bg-emerald-50 text-emerald-700';
+  }
+
+  if (isQuizInProgressStatus(quiz.status)) {
+    return 'bg-blue-50 text-blue-700';
+  }
+
+  return 'bg-slate-100 text-slate-700';
+};
+
 export function StudentCourseWeekSection({
+  courseId,
   week,
   onDownloadMaterial,
 }: StudentCourseWeekSectionProps) {
@@ -158,9 +186,18 @@ export function StudentCourseWeekSection({
                 <article key={quiz.id} className="rounded-2xl border border-slate-200 bg-white p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
-                        Quiz
-                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                          Quiz
+                        </span>
+                        {quiz.status ? (
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getQuizStatusBadgeClass(quiz)}`}
+                          >
+                            {quiz.status}
+                          </span>
+                        ) : null}
+                      </div>
                       <h4 className="mt-3 text-base font-semibold text-slate-900">{quiz.title}</h4>
                     </div>
                     {quiz.durationMinutes ? (
@@ -192,6 +229,15 @@ export function StudentCourseWeekSection({
                         <span>{quiz.totalMarks} marks</span>
                       </p>
                     ) : null}
+                  </div>
+
+                  <div className="mt-4">
+                    <Link
+                      href={`/student/dashboard/courses/${courseId}/quizzes/${quiz.id}`}
+                      className="inline-flex items-center justify-center rounded-2xl bg-[#1B3B8B] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#17306f]"
+                    >
+                      {getQuizActionLabel(quiz)}
+                    </Link>
                   </div>
                 </article>
               ))}
