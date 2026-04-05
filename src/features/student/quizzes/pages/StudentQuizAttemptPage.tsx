@@ -25,15 +25,14 @@ import { StudentQuizQuestionCard } from '@/features/student/quizzes/components/S
 import {
   buildStudentQuizDraftsFromAttempt,
   buildStudentQuizSubmitPayload,
-  clearStudentQuizStatusOverride,
   createEmptyStudentQuizDraft,
   getStudentQuizAttemptDetail,
   getStudentQuizById,
   getStudentQuizErrorMessage,
   isQuizInProgressStatus,
+  isQuizRetakeAvailableStatus,
   isQuizSubmittedStatus,
   isQuizUnavailableStatus,
-  setStudentQuizStatusOverride,
   startStudentQuizAttempt,
   StudentQuizApiError,
   submitStudentQuizAttempt,
@@ -91,47 +90,6 @@ const isQuizForCourse = (
   return normalizeLabel(quiz.courseTitle) === normalizeLabel(courseTitle);
 };
 
-const getAttemptStorageKey = (attemptKey: string) => `student-quiz-draft:${attemptKey}`;
-
-const readStoredDrafts = (
-  attemptKey: string,
-): Record<string, StudentQuizAnswerDraft> => {
-  if (typeof window === 'undefined') {
-    return {};
-  }
-
-  try {
-    const raw = window.localStorage.getItem(getAttemptStorageKey(attemptKey));
-    if (!raw) {
-      return {};
-    }
-
-    const parsed = JSON.parse(raw) as Record<string, StudentQuizAnswerDraft>;
-    return typeof parsed === 'object' && parsed !== null ? parsed : {};
-  } catch {
-    return {};
-  }
-};
-
-const writeStoredDrafts = (
-  attemptKey: string,
-  drafts: Record<string, StudentQuizAnswerDraft>,
-) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.localStorage.setItem(getAttemptStorageKey(attemptKey), JSON.stringify(drafts));
-};
-
-const clearStoredDrafts = (attemptKey: string) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.localStorage.removeItem(getAttemptStorageKey(attemptKey));
-};
-
 const formatAvailabilityWindow = (
   availableFrom: string | null,
   availableUntil: string | null,
@@ -187,25 +145,6 @@ const deriveRemainingSeconds = (attempt: StudentQuizAttemptDetail | null): numbe
   return Math.max(0, remaining);
 };
 
-const mergeDrafts = (
-  baseDrafts: Record<string, StudentQuizAnswerDraft>,
-  storedDrafts: Record<string, StudentQuizAnswerDraft>,
-) =>
-  Object.entries(baseDrafts).reduce<Record<string, StudentQuizAnswerDraft>>((accumulator, [questionId, draft]) => {
-    const storedDraft = storedDrafts[questionId];
-    accumulator[questionId] = storedDraft
-      ? {
-          ...draft,
-          ...storedDraft,
-          questionId,
-          selectedOptionIds: Array.isArray(storedDraft.selectedOptionIds)
-            ? storedDraft.selectedOptionIds
-            : draft.selectedOptionIds,
-        }
-      : draft;
-    return accumulator;
-  }, {});
-
 const getOverviewActionLabel = (quiz: StudentQuizSummary | null) => {
   if (!quiz) {
     return 'Start Quiz';
@@ -217,6 +156,10 @@ const getOverviewActionLabel = (quiz: StudentQuizSummary | null) => {
 
   if (isQuizInProgressStatus(quiz.status)) {
     return 'Continue Quiz';
+  }
+
+  if (isQuizRetakeAvailableStatus(quiz.status)) {
+    return 'Retake Quiz';
   }
 
   return 'Start Quiz';
@@ -298,14 +241,7 @@ export default function StudentQuizAttemptPage({
       const attempt = resumeAttemptId
         ? await getStudentQuizAttemptDetail(resumeAttemptId, quizId)
         : null;
-      const attemptStorageKey = attempt ? attempt.id || attempt.quizId || quizId : null;
-
-      const nextDrafts = attempt
-        ? mergeDrafts(
-            buildStudentQuizDraftsFromAttempt(attempt),
-            readStoredDrafts(attemptStorageKey ?? quizId),
-          )
-        : {};
+      const nextDrafts = attempt ? buildStudentQuizDraftsFromAttempt(attempt) : {};
 
       autoSubmitTriggeredRef.current = false;
       setState({
@@ -346,14 +282,6 @@ export default function StudentQuizAttemptPage({
   }, [loadQuizPage]);
 
   useEffect(() => {
-    if (!state.attempt || isQuizSubmittedStatus(state.attempt.status)) {
-      return;
-    }
-
-    writeStoredDrafts(state.attempt.id || state.attempt.quizId || quizId, drafts);
-  }, [drafts, quizId, state.attempt]);
-
-  useEffect(() => {
     if (!state.attempt) {
       setRemainingSeconds(null);
       return;
@@ -388,7 +316,6 @@ export default function StudentQuizAttemptPage({
       try {
         const payload = buildStudentQuizSubmitPayload(state.attempt.questions, drafts);
         await submitStudentQuizAttempt(state.attempt.id, payload);
-        clearStoredDrafts(state.attempt.id || state.attempt.quizId || quizId);
 
         let refreshedAttempt: StudentQuizAttemptDetail | null = null;
         let refreshedQuiz: StudentQuizSummary | null = null;
@@ -413,19 +340,7 @@ export default function StudentQuizAttemptPage({
             submittedAt: new Date().toISOString(),
           } as StudentQuizAttemptDetail);
         const submittedAt = submittedAttempt.submittedAt ?? new Date().toISOString();
-
-        if (refreshedQuiz && isQuizSubmittedStatus(refreshedQuiz.status)) {
-          clearStudentQuizStatusOverride(quizId);
-        } else {
-          setStudentQuizStatusOverride(quizId, {
-            status: 'Completed',
-            latestAttemptStatus: 'Completed',
-            latestAttemptId: submittedAttempt.id,
-            activeAttemptId: null,
-            submittedAt,
-            startedAt: submittedAttempt.startedAt ?? state.attempt.startedAt,
-          });
-        }
+        const fallbackQuizStatus = state.quiz?.allowMultipleAttempts ? 'Retake Available' : 'Completed';
 
         setState((current) => ({
           ...current,
@@ -438,16 +353,18 @@ export default function StudentQuizAttemptPage({
             ? {
                 ...refreshedQuiz,
                 latestAttemptId: submittedAttempt.id,
-                latestAttemptStatus: refreshedQuiz.latestAttemptStatus ?? 'Completed',
+                latestAttemptStatus:
+                  refreshedQuiz.latestAttemptStatus ?? refreshedQuiz.status ?? 'Completed',
                 submittedAt: refreshedQuiz.submittedAt ?? submittedAt,
                 activeAttemptId: null,
               }
             : current.quiz
             ? {
                 ...current.quiz,
-                status: 'Completed',
+                status: fallbackQuizStatus,
+                attemptCount: Math.max(1, current.quiz.attemptCount),
                 latestAttemptId: submittedAttempt.id,
-                latestAttemptStatus: 'Completed',
+                latestAttemptStatus: fallbackQuizStatus,
                 submittedAt,
                 activeAttemptId: null,
               }
@@ -471,7 +388,7 @@ export default function StudentQuizAttemptPage({
         setIsSubmitting(false);
       }
     },
-    [drafts, quizId, state.attempt],
+    [drafts, quizId, state.attempt, state.quiz?.allowMultipleAttempts],
   );
 
   useEffect(() => {
@@ -496,10 +413,7 @@ export default function StudentQuizAttemptPage({
 
     try {
       const attempt = await startStudentQuizAttempt(quizId);
-      const nextDrafts = mergeDrafts(
-        buildStudentQuizDraftsFromAttempt(attempt),
-        readStoredDrafts(attempt.id || attempt.quizId || quizId),
-      );
+      const nextDrafts = buildStudentQuizDraftsFromAttempt(attempt);
 
       autoSubmitTriggeredRef.current = false;
       setState((current) => ({
@@ -509,6 +423,7 @@ export default function StudentQuizAttemptPage({
           ? {
               ...current.quiz,
               status: attempt.status,
+              attemptCount: Math.max(1, current.quiz.attemptCount),
               activeAttemptId: isQuizSubmittedStatus(attempt.status) ? null : attempt.id,
               latestAttemptId: attempt.id,
               latestAttemptStatus: attempt.status,
@@ -544,22 +459,8 @@ export default function StudentQuizAttemptPage({
         }
 
         if (recoveredAttempt) {
-          const nextDrafts = mergeDrafts(
-            buildStudentQuizDraftsFromAttempt(recoveredAttempt),
-            readStoredDrafts(recoveredAttempt.id || recoveredAttempt.quizId || quizId),
-          );
+          const nextDrafts = buildStudentQuizDraftsFromAttempt(recoveredAttempt);
           const recoveredStatus = recoveredAttempt.status ?? 'In Progress';
-
-          setStudentQuizStatusOverride(quizId, {
-            status: recoveredStatus,
-            latestAttemptStatus: recoveredStatus,
-            latestAttemptId: recoveredAttempt.id || null,
-            activeAttemptId: isQuizSubmittedStatus(recoveredStatus)
-              ? null
-              : recoveredAttempt.id || null,
-            startedAt: recoveredAttempt.startedAt,
-            submittedAt: recoveredAttempt.submittedAt,
-          });
 
           autoSubmitTriggeredRef.current = false;
           setState((current) => ({
@@ -584,6 +485,7 @@ export default function StudentQuizAttemptPage({
                 ? {
                     ...current.quiz,
                     status: recoveredStatus,
+                    attemptCount: Math.max(1, current.quiz.attemptCount),
                     latestAttemptId: recoveredAttempt.id,
                     latestAttemptStatus: recoveredStatus,
                     activeAttemptId: isQuizSubmittedStatus(recoveredStatus)
@@ -609,15 +511,6 @@ export default function StudentQuizAttemptPage({
         const submittedAt =
           recoveredQuiz?.submittedAt ?? state.quiz?.submittedAt ?? new Date().toISOString();
 
-        setStudentQuizStatusOverride(quizId, {
-          status: lockedStatus,
-          latestAttemptStatus: lockedStatus,
-          latestAttemptId: recoveredQuiz?.latestAttemptId ?? state.quiz?.latestAttemptId ?? null,
-          activeAttemptId: null,
-          submittedAt,
-          startedAt: recoveredQuiz?.startedAt ?? state.quiz?.startedAt ?? null,
-        });
-
         setState((current) => ({
           ...current,
           error: null,
@@ -635,6 +528,7 @@ export default function StudentQuizAttemptPage({
               ? {
                   ...current.quiz,
                   status: lockedStatus,
+                  attemptCount: Math.max(1, current.quiz.attemptCount),
                   latestAttemptStatus: lockedStatus,
                   activeAttemptId: null,
                   submittedAt,

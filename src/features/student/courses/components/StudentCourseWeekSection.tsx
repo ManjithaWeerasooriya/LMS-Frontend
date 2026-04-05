@@ -5,7 +5,11 @@ import { CalendarClock, ClipboardList, Clock3, Download, ExternalLink, FileText,
 
 import type { CourseMaterial } from '@/features/student/materials/api/materials';
 import type { StudentCourseQuiz, StudentCourseWeek } from '@/features/student/courses/api';
-import { isQuizInProgressStatus, isQuizSubmittedStatus } from '@/features/student/quizzes/api';
+import {
+  isQuizInProgressStatus,
+  isQuizRetakeAvailableStatus,
+  isQuizSubmittedStatus,
+} from '@/features/student/quizzes/api';
 import { formatStudentQuizAvailability } from '@/features/student/quizzes/utils';
 
 type StudentCourseWeekSectionProps = {
@@ -53,6 +57,10 @@ const getQuizActionLabel = (quiz: StudentCourseQuiz) => {
     return 'Continue quiz';
   }
 
+  if (isQuizRetakeAvailableStatus(quiz.status)) {
+    return 'Retake quiz';
+  }
+
   return 'Open quiz';
 };
 
@@ -65,12 +73,20 @@ const getQuizStatusBadgeClass = (quiz: StudentCourseQuiz) => {
     return 'bg-blue-50 text-blue-700';
   }
 
+  if (isQuizRetakeAvailableStatus(quiz.status)) {
+    return 'bg-amber-50 text-amber-700';
+  }
+
   return 'bg-slate-100 text-slate-700';
 };
 
 const getQuizActionClassName = (quiz: StudentCourseQuiz) => {
   if (isQuizSubmittedStatus(quiz.status)) {
     return 'inline-flex items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100';
+  }
+
+  if (isQuizRetakeAvailableStatus(quiz.status)) {
+    return 'inline-flex items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-100';
   }
 
   return 'inline-flex items-center justify-center rounded-2xl bg-[#1B3B8B] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#17306f]';

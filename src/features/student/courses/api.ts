@@ -12,7 +12,6 @@ import {
   type CourseMaterial,
 } from '@/features/student/materials/api/materials';
 import {
-  getStudentQuizById,
   getStudentQuizzes as getStudentQuizSummaries,
   type StudentQuizSummary,
 } from '@/features/student/quizzes/api';
@@ -36,6 +35,8 @@ export type StudentCourseQuiz = {
   totalMarks: number | null;
   status: string | null;
   isPublished: boolean | null;
+  allowMultipleAttempts: boolean | null;
+  attemptCount: number;
   availableFrom: string | null;
   availableUntil: string | null;
   availabilityLabel: string | null;
@@ -133,6 +134,8 @@ const mapQuizSummaryToCourseQuiz = (quiz: StudentQuizSummary): StudentCourseQuiz
     totalMarks: quiz.totalMarks,
     status: quiz.status,
     isPublished: quiz.isPublished,
+    allowMultipleAttempts: quiz.allowMultipleAttempts,
+    attemptCount: quiz.attemptCount,
     availableFrom: quiz.availableFrom,
     availableUntil: quiz.availableUntil,
     availabilityLabel: quiz.availabilityLabel,
@@ -142,52 +145,6 @@ const mapQuizSummaryToCourseQuiz = (quiz: StudentQuizSummary): StudentCourseQuiz
     lessonTitle: quiz.lessonTitle,
     sortOrder: quiz.sortOrder,
   };
-};
-
-const mergeStudentQuizSummaryWithDetail = (
-  summary: StudentQuizSummary,
-  detail: StudentQuizSummary,
-): StudentQuizSummary => ({
-  ...summary,
-  ...detail,
-  id: detail.id || summary.id,
-  courseId: detail.courseId ?? summary.courseId,
-  courseTitle: detail.courseTitle ?? summary.courseTitle,
-  title: detail.title || summary.title,
-  description: detail.description ?? summary.description,
-  instructions: detail.instructions ?? summary.instructions,
-  durationMinutes: detail.durationMinutes ?? summary.durationMinutes,
-  totalMarks: detail.totalMarks ?? summary.totalMarks,
-  questionCount: detail.questionCount ?? summary.questionCount,
-  status: detail.status ?? summary.status,
-  availableFrom: detail.availableFrom ?? summary.availableFrom,
-  availableUntil: detail.availableUntil ?? summary.availableUntil,
-  availabilityLabel: detail.availabilityLabel ?? summary.availabilityLabel,
-  isPublished: detail.isPublished ?? summary.isPublished,
-  isAvailable: detail.isAvailable ?? summary.isAvailable,
-  allowMultipleAttempts: detail.allowMultipleAttempts ?? summary.allowMultipleAttempts,
-  activeAttemptId: detail.activeAttemptId ?? summary.activeAttemptId,
-  latestAttemptId: detail.latestAttemptId ?? summary.latestAttemptId,
-  latestAttemptStatus: detail.latestAttemptStatus ?? summary.latestAttemptStatus,
-  startedAt: detail.startedAt ?? summary.startedAt,
-  submittedAt: detail.submittedAt ?? summary.submittedAt,
-  timeRemainingSeconds: detail.timeRemainingSeconds ?? summary.timeRemainingSeconds,
-  weekLabel: detail.weekLabel ?? summary.weekLabel,
-  weekNumber: detail.weekNumber ?? summary.weekNumber,
-  moduleTitle: detail.moduleTitle ?? summary.moduleTitle,
-  lessonTitle: detail.lessonTitle ?? summary.lessonTitle,
-  sortOrder: detail.sortOrder ?? summary.sortOrder,
-});
-
-const hydrateStudentQuizSummary = async (
-  summary: StudentQuizSummary,
-): Promise<StudentQuizSummary> => {
-  try {
-    const detail = await getStudentQuizById(summary.id);
-    return mergeStudentQuizSummaryWithDetail(summary, detail);
-  } catch {
-    return summary;
-  }
 };
 
 const normalizeLabel = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
@@ -524,15 +481,9 @@ export async function getStudentCourseContent(
       getStudentQuizSummaries(),
     ]);
 
-    const filteredQuizSummaries = quizzes.filter((quiz) => isQuizInCourse(
-      mapQuizSummaryToCourseQuiz(quiz),
-      courseId,
-      course.title,
-    ));
-    const detailedQuizSummaries = await Promise.all(
-      filteredQuizSummaries.map(hydrateStudentQuizSummary),
-    );
-    const filteredQuizzes = detailedQuizSummaries.map(mapQuizSummaryToCourseQuiz);
+    const filteredQuizzes = quizzes
+      .filter((quiz) => isQuizInCourse(mapQuizSummaryToCourseQuiz(quiz), courseId, course.title))
+      .map(mapQuizSummaryToCourseQuiz);
 
     return {
       course,

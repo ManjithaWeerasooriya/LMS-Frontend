@@ -80,6 +80,10 @@ export const getStudentQuizDisplayStatus = (status?: string | null) => {
     return 'Not Started';
   }
 
+  if (normalized.includes('retake')) {
+    return 'Retake Available';
+  }
+
   if (
     normalized.includes('submitted') ||
     normalized.includes('completed') ||
