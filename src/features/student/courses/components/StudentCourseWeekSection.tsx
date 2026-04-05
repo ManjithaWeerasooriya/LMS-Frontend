@@ -6,6 +6,7 @@ import { CalendarClock, ClipboardList, Clock3, Download, ExternalLink, FileText,
 import type { CourseMaterial } from '@/features/student/materials/api/materials';
 import type { StudentCourseQuiz, StudentCourseWeek } from '@/features/student/courses/api';
 import { isQuizInProgressStatus, isQuizSubmittedStatus } from '@/features/student/quizzes/api';
+import { formatStudentQuizAvailability } from '@/features/student/quizzes/utils';
 
 type StudentCourseWeekSectionProps = {
   courseId: string;
@@ -35,32 +36,13 @@ const formatDate = (value: string | null) => {
   });
 };
 
-const formatAvailability = (quiz: StudentCourseQuiz) => {
-  if (quiz.availabilityLabel) {
-    return quiz.availabilityLabel;
-  }
-
-  const availableFrom = formatDate(quiz.availableFrom);
-  const availableUntil = formatDate(quiz.availableUntil);
-
-  if (availableFrom && availableUntil) {
-    return `Available ${availableFrom} to ${availableUntil}`;
-  }
-
-  if (availableFrom) {
-    return `Opens ${availableFrom}`;
-  }
-
-  if (availableUntil) {
-    return `Closes ${availableUntil}`;
-  }
-
-  if (quiz.status) {
-    return quiz.status;
-  }
-
-  return 'Availability to be announced';
-};
+const formatAvailability = (quiz: StudentCourseQuiz) =>
+  formatStudentQuizAvailability(
+    quiz.availableFrom,
+    quiz.availableUntil,
+    quiz.availabilityLabel,
+    { fallbackLabel: quiz.status ?? 'Availability to be announced' },
+  );
 
 const getQuizActionLabel = (quiz: StudentCourseQuiz) => {
   if (isQuizSubmittedStatus(quiz.status)) {
@@ -84,6 +66,14 @@ const getQuizStatusBadgeClass = (quiz: StudentCourseQuiz) => {
   }
 
   return 'bg-slate-100 text-slate-700';
+};
+
+const getQuizActionClassName = (quiz: StudentCourseQuiz) => {
+  if (isQuizSubmittedStatus(quiz.status)) {
+    return 'inline-flex items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100';
+  }
+
+  return 'inline-flex items-center justify-center rounded-2xl bg-[#1B3B8B] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#17306f]';
 };
 
 export function StudentCourseWeekSection({
@@ -234,7 +224,7 @@ export function StudentCourseWeekSection({
                   <div className="mt-4">
                     <Link
                       href={`/student/dashboard/courses/${courseId}/quizzes/${quiz.id}`}
-                      className="inline-flex items-center justify-center rounded-2xl bg-[#1B3B8B] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#17306f]"
+                      className={getQuizActionClassName(quiz)}
                     >
                       {getQuizActionLabel(quiz)}
                     </Link>

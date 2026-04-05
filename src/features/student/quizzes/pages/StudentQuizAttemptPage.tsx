@@ -25,6 +25,7 @@ import { StudentQuizQuestionCard } from '@/features/student/quizzes/components/S
 import {
   buildStudentQuizDraftsFromAttempt,
   buildStudentQuizSubmitPayload,
+  clearStudentQuizStatusOverride,
   createEmptyStudentQuizDraft,
   getStudentQuizAttemptDetail,
   getStudentQuizById,
@@ -32,6 +33,7 @@ import {
   isQuizInProgressStatus,
   isQuizSubmittedStatus,
   isQuizUnavailableStatus,
+  setStudentQuizStatusOverride,
   startStudentQuizAttempt,
   StudentQuizApiError,
   submitStudentQuizAttempt,
@@ -39,6 +41,7 @@ import {
   type StudentQuizAttemptDetail,
   type StudentQuizSummary,
 } from '@/features/student/quizzes/api';
+import { formatStudentQuizAvailability } from '@/features/student/quizzes/utils';
 import {
   BreadcrumbTrail,
   QuizMetricCard,
@@ -133,25 +136,10 @@ const formatAvailabilityWindow = (
   availableFrom: string | null,
   availableUntil: string | null,
   availabilityLabel: string | null,
-) => {
-  if (availabilityLabel) {
-    return availabilityLabel;
-  }
-
-  if (availableFrom && availableUntil) {
-    return `${formatDateTime(availableFrom)} to ${formatDateTime(availableUntil)}`;
-  }
-
-  if (availableFrom) {
-    return `Opens ${formatDateTime(availableFrom)}`;
-  }
-
-  if (availableUntil) {
-    return `Closes ${formatDateTime(availableUntil)}`;
-  }
-
-  return 'Availability window not specified';
-};
+) =>
+  formatStudentQuizAvailability(availableFrom, availableUntil, availabilityLabel, {
+    fallbackLabel: 'Availability window not specified',
+  });
 
 const formatDuration = (durationMinutes: number | null) =>
   durationMinutes && durationMinutes > 0 ? `${durationMinutes} minutes` : 'Duration not specified';
@@ -232,6 +220,18 @@ const getOverviewActionLabel = (quiz: StudentQuizSummary | null) => {
   }
 
   return 'Start Quiz';
+};
+
+const isStudentQuizAttemptLockedMessage = (message: string) => {
+  const normalized = message.trim().toLowerCase();
+
+  return (
+    normalized.includes('multiple attempts are not allowed') ||
+    normalized.includes('already submitted') ||
+    normalized.includes('already completed') ||
+    normalized.includes('already attempted') ||
+    normalized.includes('attempt limit')
+  );
 };
 
 export default function StudentQuizAttemptPage({
@@ -391,11 +391,18 @@ export default function StudentQuizAttemptPage({
         clearStoredDrafts(state.attempt.id || state.attempt.quizId || quizId);
 
         let refreshedAttempt: StudentQuizAttemptDetail | null = null;
+        let refreshedQuiz: StudentQuizSummary | null = null;
 
         try {
           refreshedAttempt = await getStudentQuizAttemptDetail(state.attempt.id, quizId);
         } catch {
           refreshedAttempt = null;
+        }
+
+        try {
+          refreshedQuiz = await getStudentQuizById(quizId);
+        } catch {
+          refreshedQuiz = null;
         }
 
         const submittedAttempt =
@@ -405,17 +412,43 @@ export default function StudentQuizAttemptPage({
             status: 'Submitted',
             submittedAt: new Date().toISOString(),
           } as StudentQuizAttemptDetail);
+        const submittedAt = submittedAttempt.submittedAt ?? new Date().toISOString();
+
+        if (refreshedQuiz && isQuizSubmittedStatus(refreshedQuiz.status)) {
+          clearStudentQuizStatusOverride(quizId);
+        } else {
+          setStudentQuizStatusOverride(quizId, {
+            status: 'Completed',
+            latestAttemptStatus: 'Completed',
+            latestAttemptId: submittedAttempt.id,
+            activeAttemptId: null,
+            submittedAt,
+            startedAt: submittedAttempt.startedAt ?? state.attempt.startedAt,
+          });
+        }
 
         setState((current) => ({
           ...current,
-          attempt: submittedAttempt,
-          quiz: current.quiz
+          attempt: {
+            ...submittedAttempt,
+            status: submittedAttempt.status ?? 'Submitted',
+            submittedAt,
+          },
+          quiz: refreshedQuiz
+            ? {
+                ...refreshedQuiz,
+                latestAttemptId: submittedAttempt.id,
+                latestAttemptStatus: refreshedQuiz.latestAttemptStatus ?? 'Completed',
+                submittedAt: refreshedQuiz.submittedAt ?? submittedAt,
+                activeAttemptId: null,
+              }
+            : current.quiz
             ? {
                 ...current.quiz,
-                status: submittedAttempt.status,
+                status: 'Completed',
                 latestAttemptId: submittedAttempt.id,
-                latestAttemptStatus: submittedAttempt.status,
-                submittedAt: submittedAttempt.submittedAt,
+                latestAttemptStatus: 'Completed',
+                submittedAt,
                 activeAttemptId: null,
               }
             : current.quiz,
@@ -488,12 +521,140 @@ export default function StudentQuizAttemptPage({
       setDrafts(nextDrafts);
       setRemainingSeconds(deriveRemainingSeconds(attempt));
     } catch (startError) {
+      const message =
+        startError instanceof StudentQuizApiError
+          ? startError.message
+          : getStudentQuizErrorMessage(startError, 'Unable to start this quiz.');
+
+      if (isStudentQuizAttemptLockedMessage(message)) {
+        let recoveredQuiz: StudentQuizSummary | null = null;
+        let recoveredAttempt: StudentQuizAttemptDetail | null = null;
+
+        try {
+          recoveredQuiz = await getStudentQuizById(quizId);
+          const recoveredAttemptId =
+            recoveredQuiz.activeAttemptId ?? recoveredQuiz.latestAttemptId;
+
+          if (recoveredAttemptId) {
+            recoveredAttempt = await getStudentQuizAttemptDetail(recoveredAttemptId, quizId);
+          }
+        } catch {
+          recoveredQuiz = null;
+          recoveredAttempt = null;
+        }
+
+        if (recoveredAttempt) {
+          const nextDrafts = mergeDrafts(
+            buildStudentQuizDraftsFromAttempt(recoveredAttempt),
+            readStoredDrafts(recoveredAttempt.id || recoveredAttempt.quizId || quizId),
+          );
+          const recoveredStatus = recoveredAttempt.status ?? 'In Progress';
+
+          setStudentQuizStatusOverride(quizId, {
+            status: recoveredStatus,
+            latestAttemptStatus: recoveredStatus,
+            latestAttemptId: recoveredAttempt.id || null,
+            activeAttemptId: isQuizSubmittedStatus(recoveredStatus)
+              ? null
+              : recoveredAttempt.id || null,
+            startedAt: recoveredAttempt.startedAt,
+            submittedAt: recoveredAttempt.submittedAt,
+          });
+
+          autoSubmitTriggeredRef.current = false;
+          setState((current) => ({
+            ...current,
+            error: null,
+            attempt: recoveredAttempt,
+            quiz: recoveredQuiz
+              ? {
+                  ...recoveredQuiz,
+                  status: recoveredStatus,
+                  latestAttemptId: recoveredAttempt.id || recoveredQuiz.latestAttemptId,
+                  latestAttemptStatus: recoveredStatus,
+                  activeAttemptId: isQuizSubmittedStatus(recoveredStatus)
+                    ? null
+                    : recoveredAttempt.id || recoveredQuiz.activeAttemptId,
+                  startedAt: recoveredAttempt.startedAt ?? recoveredQuiz.startedAt,
+                  submittedAt: recoveredAttempt.submittedAt ?? recoveredQuiz.submittedAt,
+                  timeRemainingSeconds:
+                    recoveredAttempt.timeRemainingSeconds ?? recoveredQuiz.timeRemainingSeconds,
+                }
+              : current.quiz
+                ? {
+                    ...current.quiz,
+                    status: recoveredStatus,
+                    latestAttemptId: recoveredAttempt.id,
+                    latestAttemptStatus: recoveredStatus,
+                    activeAttemptId: isQuizSubmittedStatus(recoveredStatus)
+                      ? null
+                      : recoveredAttempt.id,
+                    startedAt: recoveredAttempt.startedAt,
+                    submittedAt: recoveredAttempt.submittedAt,
+                    timeRemainingSeconds: recoveredAttempt.timeRemainingSeconds,
+                  }
+                : current.quiz,
+          }));
+          setDrafts(nextDrafts);
+          setRemainingSeconds(deriveRemainingSeconds(recoveredAttempt));
+          setSubmissionMessage(
+            isQuizSubmittedStatus(recoveredStatus)
+              ? 'This quiz has already been submitted. Additional attempts are not allowed.'
+              : null,
+          );
+          return;
+        }
+
+        const lockedStatus = 'Completed';
+        const submittedAt =
+          recoveredQuiz?.submittedAt ?? state.quiz?.submittedAt ?? new Date().toISOString();
+
+        setStudentQuizStatusOverride(quizId, {
+          status: lockedStatus,
+          latestAttemptStatus: lockedStatus,
+          latestAttemptId: recoveredQuiz?.latestAttemptId ?? state.quiz?.latestAttemptId ?? null,
+          activeAttemptId: null,
+          submittedAt,
+          startedAt: recoveredQuiz?.startedAt ?? state.quiz?.startedAt ?? null,
+        });
+
+        setState((current) => ({
+          ...current,
+          error: null,
+          attempt: null,
+          quiz: recoveredQuiz
+            ? {
+                ...recoveredQuiz,
+                status: lockedStatus,
+                latestAttemptStatus:
+                  recoveredQuiz.latestAttemptStatus ?? lockedStatus,
+                activeAttemptId: null,
+                submittedAt,
+              }
+            : current.quiz
+              ? {
+                  ...current.quiz,
+                  status: lockedStatus,
+                  latestAttemptStatus: lockedStatus,
+                  activeAttemptId: null,
+                  submittedAt,
+                }
+              : current.quiz,
+        }));
+        setDrafts({});
+        setRemainingSeconds(null);
+        setSubmissionMessage(
+          'This quiz has already been submitted. Additional attempts are not allowed.',
+        );
+        return;
+      }
+
       setState((current) => ({
         ...current,
         error:
           startError instanceof StudentQuizApiError
             ? startError.message
-            : getStudentQuizErrorMessage(startError, 'Unable to start this quiz.'),
+            : message,
       }));
     } finally {
       setIsStarting(false);

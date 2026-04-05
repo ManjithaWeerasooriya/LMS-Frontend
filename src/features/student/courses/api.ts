@@ -11,6 +11,11 @@ import {
   getCourseMaterials,
   type CourseMaterial,
 } from '@/features/student/materials/api/materials';
+import {
+  getStudentQuizById,
+  getStudentQuizzes as getStudentQuizSummaries,
+  type StudentQuizSummary,
+} from '@/features/student/quizzes/api';
 
 export type StudentCourseOverview = Omit<StudentCourseListItem, 'description'> & {
   description: string;
@@ -58,7 +63,6 @@ export type StudentCourseContent = {
 };
 
 const PUBLIC_COURSE_DETAIL_PATH = resolveApiPath('/api/public/courses/{id}');
-const STUDENT_QUIZZES_PATH = resolveApiPath('/api/v1/student/quizzes');
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -91,70 +95,6 @@ const readNumber = (record: Record<string, unknown>, keys: string[]): number | n
   return null;
 };
 
-const readBoolean = (record: Record<string, unknown>, keys: string[]): boolean | null => {
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === 'boolean') {
-      return value;
-    }
-    if (typeof value === 'string') {
-      const normalized = value.trim().toLowerCase();
-      if (normalized === 'true') return true;
-      if (normalized === 'false') return false;
-    }
-  }
-
-  return null;
-};
-
-const readRecord = (
-  record: Record<string, unknown>,
-  keys: string[],
-): Record<string, unknown> | null => {
-  for (const key of keys) {
-    const value = record[key];
-    if (isRecord(value)) {
-      return value;
-    }
-  }
-
-  return null;
-};
-
-const unwrapCollection = (value: unknown, keys: string[] = []): unknown[] => {
-  if (Array.isArray(value)) {
-    return value;
-  }
-
-  if (!isRecord(value)) {
-    return [];
-  }
-
-  for (const key of [...keys, 'items', 'results', 'data']) {
-    const nested = value[key];
-    if (Array.isArray(nested)) {
-      return nested;
-    }
-  }
-
-  return [];
-};
-
-const unwrapEntity = (value: unknown, keys: string[] = []): Record<string, unknown> => {
-  if (!isRecord(value)) {
-    return {};
-  }
-
-  for (const key of [...keys, 'item', 'data', 'result']) {
-    const nested = value[key];
-    if (isRecord(nested)) {
-      return nested;
-    }
-  }
-
-  return value;
-};
-
 const normalizeCourseDescription = (title: string, value?: string | null) =>
   value?.trim() ||
   `${title} is available from your student dashboard. Weekly learning content will appear here as your instructor publishes it.`;
@@ -181,39 +121,73 @@ const normalizeCourseOverview = (
   };
 };
 
-const normalizeQuiz = (value: unknown): StudentCourseQuiz => {
-  const record = unwrapEntity(value, ['quiz']);
-  const courseRecord = readRecord(record, ['course']);
-  const courseTitle =
-    readString(record, ['courseTitle', 'courseName']) ??
-    (courseRecord ? readString(courseRecord, ['title', 'name']) : null);
-
+const mapQuizSummaryToCourseQuiz = (quiz: StudentQuizSummary): StudentCourseQuiz => {
   return {
-    id: readString(record, ['id', 'quizId']) ?? '',
-    courseId:
-      readString(record, ['courseId']) ??
-      (courseRecord ? readString(courseRecord, ['id', 'courseId']) : null),
-    courseTitle,
-    title: readString(record, ['title', 'quizTitle', 'name']) ?? 'Untitled Quiz',
-    description: readString(record, ['description', 'summary']),
-    durationMinutes: readNumber(record, ['durationMinutes', 'duration']),
-    questionCount: readNumber(record, ['questionCount', 'questionsCount', 'totalQuestions']),
-    totalMarks: readNumber(record, ['totalMarks', 'maxMarks']),
-    status: readString(record, ['status']),
-    isPublished: readBoolean(record, ['isPublished', 'published']),
-    availableFrom: readString(record, ['startTimeUtc', 'startsAt', 'availableFrom']),
-    availableUntil: readString(record, ['endTimeUtc', 'endsAt', 'availableUntil']),
-    availabilityLabel: readString(record, ['availabilityLabel', 'availability', 'availabilityText']),
-    weekLabel:
-      readString(record, ['weekLabel', 'weekName']) ??
-      (typeof record.week === 'string' && record.week.trim() ? record.week.trim() : null),
-    weekNumber:
-      readNumber(record, ['weekNumber']) ??
-      (typeof record.week === 'number' && Number.isFinite(record.week) ? record.week : null),
-    moduleTitle: readString(record, ['moduleTitle', 'moduleName', 'module']),
-    lessonTitle: readString(record, ['lessonTitle', 'lessonName', 'lesson']),
-    sortOrder: readNumber(record, ['sortOrder', 'orderIndex']),
+    id: quiz.id,
+    courseId: quiz.courseId,
+    courseTitle: quiz.courseTitle,
+    title: quiz.title,
+    description: quiz.description,
+    durationMinutes: quiz.durationMinutes,
+    questionCount: quiz.questionCount,
+    totalMarks: quiz.totalMarks,
+    status: quiz.status,
+    isPublished: quiz.isPublished,
+    availableFrom: quiz.availableFrom,
+    availableUntil: quiz.availableUntil,
+    availabilityLabel: quiz.availabilityLabel,
+    weekLabel: quiz.weekLabel,
+    weekNumber: quiz.weekNumber,
+    moduleTitle: quiz.moduleTitle,
+    lessonTitle: quiz.lessonTitle,
+    sortOrder: quiz.sortOrder,
   };
+};
+
+const mergeStudentQuizSummaryWithDetail = (
+  summary: StudentQuizSummary,
+  detail: StudentQuizSummary,
+): StudentQuizSummary => ({
+  ...summary,
+  ...detail,
+  id: detail.id || summary.id,
+  courseId: detail.courseId ?? summary.courseId,
+  courseTitle: detail.courseTitle ?? summary.courseTitle,
+  title: detail.title || summary.title,
+  description: detail.description ?? summary.description,
+  instructions: detail.instructions ?? summary.instructions,
+  durationMinutes: detail.durationMinutes ?? summary.durationMinutes,
+  totalMarks: detail.totalMarks ?? summary.totalMarks,
+  questionCount: detail.questionCount ?? summary.questionCount,
+  status: detail.status ?? summary.status,
+  availableFrom: detail.availableFrom ?? summary.availableFrom,
+  availableUntil: detail.availableUntil ?? summary.availableUntil,
+  availabilityLabel: detail.availabilityLabel ?? summary.availabilityLabel,
+  isPublished: detail.isPublished ?? summary.isPublished,
+  isAvailable: detail.isAvailable ?? summary.isAvailable,
+  allowMultipleAttempts: detail.allowMultipleAttempts ?? summary.allowMultipleAttempts,
+  activeAttemptId: detail.activeAttemptId ?? summary.activeAttemptId,
+  latestAttemptId: detail.latestAttemptId ?? summary.latestAttemptId,
+  latestAttemptStatus: detail.latestAttemptStatus ?? summary.latestAttemptStatus,
+  startedAt: detail.startedAt ?? summary.startedAt,
+  submittedAt: detail.submittedAt ?? summary.submittedAt,
+  timeRemainingSeconds: detail.timeRemainingSeconds ?? summary.timeRemainingSeconds,
+  weekLabel: detail.weekLabel ?? summary.weekLabel,
+  weekNumber: detail.weekNumber ?? summary.weekNumber,
+  moduleTitle: detail.moduleTitle ?? summary.moduleTitle,
+  lessonTitle: detail.lessonTitle ?? summary.lessonTitle,
+  sortOrder: detail.sortOrder ?? summary.sortOrder,
+});
+
+const hydrateStudentQuizSummary = async (
+  summary: StudentQuizSummary,
+): Promise<StudentQuizSummary> => {
+  try {
+    const detail = await getStudentQuizById(summary.id);
+    return mergeStudentQuizSummaryWithDetail(summary, detail);
+  } catch {
+    return summary;
+  }
 };
 
 const normalizeLabel = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
@@ -532,8 +506,8 @@ export async function getStudentCourseOverview(
 
 export async function getStudentQuizzes(): Promise<StudentCourseQuiz[]> {
   try {
-    const { data } = await apiClient.get<unknown>(STUDENT_QUIZZES_PATH);
-    return unwrapCollection(data, ['quizzes']).map(normalizeQuiz).filter((quiz) => quiz.id);
+    const quizzes = await getStudentQuizSummaries();
+    return quizzes.map(mapQuizSummaryToCourseQuiz).filter((quiz) => quiz.id);
   } catch (error) {
     throw convertStudentAxiosError(error, 'Unable to load student quizzes.');
   }
@@ -547,10 +521,18 @@ export async function getStudentCourseContent(
     const [course, materials, quizzes] = await Promise.all([
       getStudentCourseOverview(courseId, fallbackCourse),
       getCourseMaterials(courseId),
-      getStudentQuizzes(),
+      getStudentQuizSummaries(),
     ]);
 
-    const filteredQuizzes = quizzes.filter((quiz) => isQuizInCourse(quiz, courseId, course.title));
+    const filteredQuizSummaries = quizzes.filter((quiz) => isQuizInCourse(
+      mapQuizSummaryToCourseQuiz(quiz),
+      courseId,
+      course.title,
+    ));
+    const detailedQuizSummaries = await Promise.all(
+      filteredQuizSummaries.map(hydrateStudentQuizSummary),
+    );
+    const filteredQuizzes = detailedQuizSummaries.map(mapQuizSummaryToCourseQuiz);
 
     return {
       course,

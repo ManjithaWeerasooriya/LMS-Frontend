@@ -7,6 +7,7 @@ import { buildApiPath, resolveApiPath } from '@/generated/api-paths';
 import type { QuestionType, SubmitQuizAttemptDto } from '@/generated/api-types';
 import { QUIZ_QUESTION_TYPES } from '@/features/teacher/quizzes/types';
 import { slugifyFallback } from '@/features/teacher/quizzes/utils';
+import { getStudentQuizDisplayStatus } from '@/features/student/quizzes/utils';
 
 export type StudentQuizSummary = {
   id: string;
@@ -112,6 +113,7 @@ const STUDENT_QUIZ_DETAIL_PATH = resolveApiPath('/api/v1/student/quizzes/{quizId
 const STUDENT_QUIZ_START_PATH = resolveApiPath('/api/v1/student/quizzes/{quizId}/attempts');
 const STUDENT_QUIZ_ATTEMPT_PATH = resolveApiPath('/api/v1/student/quizzes/attempts/{attemptId}');
 const STUDENT_QUIZ_SUBMIT_PATH = resolveApiPath('/api/v1/student/quizzes/attempts/{attemptId}/submit');
+const QUIZ_STATUS_OVERRIDE_STORAGE_KEY = 'student-quiz-status-overrides';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -224,6 +226,68 @@ const unwrapEntity = (value: unknown, keys: string[] = []): Record<string, unkno
   return value;
 };
 
+type StudentQuizStatusOverride = Partial<
+  Pick<
+    StudentQuizSummary,
+    'status' | 'latestAttemptStatus' | 'latestAttemptId' | 'activeAttemptId' | 'submittedAt' | 'startedAt'
+  >
+>;
+
+const readStoredQuizStatusOverrides = (): Record<string, StudentQuizStatusOverride> => {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(QUIZ_STATUS_OVERRIDE_STORAGE_KEY);
+    if (!raw) {
+      return {};
+    }
+
+    const parsed = JSON.parse(raw) as Record<string, StudentQuizStatusOverride>;
+    return typeof parsed === 'object' && parsed !== null ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeStoredQuizStatusOverrides = (overrides: Record<string, StudentQuizStatusOverride>) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.sessionStorage.setItem(QUIZ_STATUS_OVERRIDE_STORAGE_KEY, JSON.stringify(overrides));
+};
+
+const applyStudentQuizStatusOverride = (quiz: StudentQuizSummary): StudentQuizSummary => {
+  const override = readStoredQuizStatusOverrides()[quiz.id];
+  return override ? { ...quiz, ...override } : quiz;
+};
+
+export const setStudentQuizStatusOverride = (
+  quizId: string,
+  override: StudentQuizStatusOverride,
+) => {
+  const currentOverrides = readStoredQuizStatusOverrides();
+  writeStoredQuizStatusOverrides({
+    ...currentOverrides,
+    [quizId]: {
+      ...currentOverrides[quizId],
+      ...override,
+    },
+  });
+};
+
+export const clearStudentQuizStatusOverride = (quizId: string) => {
+  const currentOverrides = readStoredQuizStatusOverrides();
+  if (!(quizId in currentOverrides)) {
+    return;
+  }
+
+  delete currentOverrides[quizId];
+  writeStoredQuizStatusOverrides(currentOverrides);
+};
+
 const normalizeQuestionType = (value: unknown): QuestionType => {
   if (typeof value === 'number' && value >= 1 && value <= 6) {
     return value as QuestionType;
@@ -317,31 +381,93 @@ const normalizeAttemptAnswer = (
   };
 };
 
-const extractAttemptRecord = (record: Record<string, unknown>) =>
-  readRecord(record, ['attempt', 'currentAttempt', 'activeAttempt', 'latestAttempt']);
+const extractAttemptRecord = (record: Record<string, unknown>) => {
+  const nestedAttempt = readRecord(record, [
+    'attempt',
+    'currentAttempt',
+    'activeAttempt',
+    'latestAttempt',
+    'submission',
+    'latestSubmission',
+    'currentSubmission',
+  ]);
+
+  if (nestedAttempt) {
+    return nestedAttempt;
+  }
+
+  const attemptCollection = readArray(record, ['attempts', 'submissions']);
+  for (let index = attemptCollection.length - 1; index >= 0; index -= 1) {
+    const candidate = attemptCollection[index];
+    if (isRecord(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+};
+
+const extractAttemptStatus = (
+  record: Record<string, unknown>,
+  attemptRecord: Record<string, unknown> | null,
+) =>
+  (attemptRecord
+    ? readString(attemptRecord, ['status', 'attemptStatus', 'submissionStatus'])
+    : null) ??
+  readString(record, [
+    'latestAttemptStatus',
+    'attemptStatus',
+    'submissionStatus',
+    'currentAttemptStatus',
+    'lastAttemptStatus',
+  ]);
+
+const extractSubmittedAt = (
+  record: Record<string, unknown>,
+  attemptRecord: Record<string, unknown> | null,
+) =>
+  (attemptRecord
+    ? readString(attemptRecord, ['submittedAt', 'completedAt', 'submittedOn', 'completedOn'])
+    : null) ??
+  readString(record, [
+    'submittedAt',
+    'completedAt',
+    'latestSubmittedAt',
+    'lastSubmittedAt',
+    'submittedOn',
+    'completedOn',
+  ]);
+
+const extractStartedAt = (
+  record: Record<string, unknown>,
+  attemptRecord: Record<string, unknown> | null,
+) =>
+  (attemptRecord ? readString(attemptRecord, ['startedAt', 'startedOn']) : null) ??
+  readString(record, ['startedAt', 'startedOn']);
 
 const inferQuizStatus = (
   record: Record<string, unknown>,
   attemptRecord: Record<string, unknown> | null,
 ): string | null => {
-  const explicitStatus =
-    readString(record, ['status']) ?? (attemptRecord ? readString(attemptRecord, ['status']) : null);
-  if (explicitStatus) {
-    return explicitStatus;
+  const attemptStatus = extractAttemptStatus(record, attemptRecord);
+  const submittedAt = extractSubmittedAt(record, attemptRecord);
+  const startedAt = extractStartedAt(record, attemptRecord);
+
+  if (attemptStatus) {
+    return getStudentQuizDisplayStatus(attemptStatus);
   }
 
-  const submittedAt =
-    readString(record, ['submittedAt', 'completedAt']) ??
-    (attemptRecord ? readString(attemptRecord, ['submittedAt', 'completedAt']) : null);
   if (submittedAt) {
-    return 'Submitted';
+    return 'Completed';
   }
 
-  const startedAt =
-    readString(record, ['startedAt']) ??
-    (attemptRecord ? readString(attemptRecord, ['startedAt']) : null);
   if (startedAt) {
     return 'In Progress';
+  }
+
+  const explicitStatus = readString(record, ['status']);
+  if (explicitStatus) {
+    return getStudentQuizDisplayStatus(explicitStatus);
   }
 
   const available = readBoolean(record, ['isAvailable', 'available']);
@@ -357,8 +483,12 @@ const normalizeQuizSummary = (value: unknown): StudentQuizSummary => {
   const courseRecord = readRecord(record, ['course']);
   const attemptRecord = extractAttemptRecord(record);
   const questions = unwrapCollection(record.questions, ['questions']);
+  const attemptStatus = extractAttemptStatus(record, attemptRecord);
+  const submittedAt = extractSubmittedAt(record, attemptRecord);
+  const startedAt = extractStartedAt(record, attemptRecord);
+  const inferredStatus = inferQuizStatus(record, attemptRecord);
 
-  return {
+  return applyStudentQuizStatusOverride({
     id: readString(record, ['id', 'quizId']) ?? '',
     courseId:
       readString(record, ['courseId']) ??
@@ -374,7 +504,7 @@ const normalizeQuizSummary = (value: unknown): StudentQuizSummary => {
     questionCount:
       readNumber(record, ['questionCount', 'questionsCount', 'totalQuestions']) ??
       questions.length,
-    status: inferQuizStatus(record, attemptRecord),
+    status: inferredStatus,
     availableFrom: readString(record, ['startTimeUtc', 'startsAt', 'availableFrom']),
     availableUntil: readString(record, ['endTimeUtc', 'endsAt', 'availableUntil']),
     availabilityLabel: readString(record, ['availabilityLabel', 'availability', 'availabilityText']),
@@ -383,19 +513,13 @@ const normalizeQuizSummary = (value: unknown): StudentQuizSummary => {
     allowMultipleAttempts: readBoolean(record, ['allowMultipleAttempts']),
     activeAttemptId:
       (attemptRecord ? readString(attemptRecord, ['id', 'attemptId']) : null) ??
-      readString(record, ['activeAttemptId', 'currentAttemptId']),
+      readString(record, ['activeAttemptId', 'currentAttemptId', 'attemptId']),
     latestAttemptId:
       (attemptRecord ? readString(attemptRecord, ['id', 'attemptId']) : null) ??
       readString(record, ['latestAttemptId', 'attemptId']),
-    latestAttemptStatus:
-      (attemptRecord ? readString(attemptRecord, ['status']) : null) ??
-      readString(record, ['latestAttemptStatus']),
-    startedAt:
-      (attemptRecord ? readString(attemptRecord, ['startedAt', 'startedOn']) : null) ??
-      readString(record, ['startedAt']),
-    submittedAt:
-      (attemptRecord ? readString(attemptRecord, ['submittedAt', 'completedAt', 'submittedOn']) : null) ??
-      readString(record, ['submittedAt', 'completedAt']),
+    latestAttemptStatus: attemptStatus ? getStudentQuizDisplayStatus(attemptStatus) : inferredStatus,
+    startedAt,
+    submittedAt,
     timeRemainingSeconds:
       (attemptRecord ? readNumber(attemptRecord, ['timeRemainingSeconds', 'remainingSeconds']) : null) ??
       readNumber(record, ['timeRemainingSeconds', 'remainingSeconds']),
@@ -408,7 +532,7 @@ const normalizeQuizSummary = (value: unknown): StudentQuizSummary => {
     moduleTitle: readString(record, ['moduleTitle', 'moduleName', 'module']),
     lessonTitle: readString(record, ['lessonTitle', 'lessonName', 'lesson']),
     sortOrder: readNumber(record, ['sortOrder', 'orderIndex']),
-  };
+  });
 };
 
 const normalizeAttemptDetail = (
@@ -451,7 +575,7 @@ const normalizeAttemptDetail = (
     questionCount:
       readNumber(record, ['questionCount', 'questionsCount', 'totalQuestions']) ??
       (questions.length > 0 ? questions.length : quizSummary.questionCount),
-    status: inferQuizStatus(record, null),
+    status: getStudentQuizDisplayStatus(inferQuizStatus(record, null)),
     availableFrom:
       readString(record, ['availableFrom', 'startTimeUtc', 'startsAt']) ?? quizSummary.availableFrom,
     availableUntil:
@@ -533,7 +657,7 @@ const convertQuizError = (
 
 export const isQuizSubmittedStatus = (status?: string | null) =>
   typeof status === 'string' &&
-  ['submitted', 'completed', 'finished'].some((value) => status.toLowerCase().includes(value));
+  ['submitted', 'completed', 'finished', 'attempted'].some((value) => status.toLowerCase().includes(value));
 
 export const isQuizInProgressStatus = (status?: string | null) =>
   typeof status === 'string' &&
@@ -597,6 +721,9 @@ export async function getStudentQuizById(quizId: string): Promise<StudentQuizSum
       buildApiPath(STUDENT_QUIZ_DETAIL_PATH, { quizId }),
     );
     const quiz = normalizeQuizSummary(data);
+    if (isQuizSubmittedStatus(quiz.status)) {
+      clearStudentQuizStatusOverride(quizId);
+    }
     return {
       ...quiz,
       id: quiz.id || quizId,
@@ -632,7 +759,7 @@ export async function startStudentQuizAttempt(
     const normalized = normalizeAttemptDetail(response.data, quizId);
 
     if (normalized.id || normalized.questions.length > 0) {
-      return {
+      const normalizedAttempt = {
         ...normalized,
         id:
           normalized.id ||
@@ -640,6 +767,17 @@ export async function startStudentQuizAttempt(
           extractIdFromLocation(response.headers.location) ||
           '',
       };
+      setStudentQuizStatusOverride(quizId, {
+        status: getStudentQuizDisplayStatus(normalizedAttempt.status),
+        latestAttemptStatus: getStudentQuizDisplayStatus(normalizedAttempt.status),
+        latestAttemptId: normalizedAttempt.id || null,
+        activeAttemptId: isQuizSubmittedStatus(normalizedAttempt.status)
+          ? null
+          : normalizedAttempt.id || null,
+        startedAt: normalizedAttempt.startedAt,
+        submittedAt: normalizedAttempt.submittedAt,
+      });
+      return normalizedAttempt;
     }
 
     const attemptId =
