@@ -69,7 +69,7 @@ export type TeacherQuizAttemptAnswer = {
   questionText: string;
   questionType: QuestionType;
   maxMarks: number;
-  awardedMarks: number;
+  awardedMarks: number | null;
   isCorrect: boolean | null;
   answerText: string;
   selectedOptionIds: string[];

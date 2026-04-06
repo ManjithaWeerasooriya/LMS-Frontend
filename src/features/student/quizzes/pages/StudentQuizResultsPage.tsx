@@ -11,6 +11,9 @@ import {
   type StudentCourseListItem,
 } from '@/features/student/api/student';
 import {
+  getStudentQuizAttemptDetail,
+  getStudentQuizById,
+  getStudentQuizResult,
   getStudentQuizzes,
   hasStudentQuizCompletedAttempt,
   StudentQuizApiError,
@@ -63,13 +66,86 @@ const getCourseLabel = (
   return '—';
 };
 
+const mergeResultFields = (
+  quiz: StudentQuizSummary,
+  update: Partial<StudentQuizSummary>,
+): StudentQuizSummary => ({
+  ...quiz,
+  ...update,
+  id: update.id ?? quiz.id,
+  courseId: update.courseId ?? quiz.courseId,
+  courseTitle: update.courseTitle ?? quiz.courseTitle,
+  title: update.title ?? quiz.title,
+  totalMarks: update.totalMarks ?? quiz.totalMarks,
+  areResultsPublished: update.areResultsPublished ?? quiz.areResultsPublished,
+  score: update.score ?? quiz.score,
+  percentage: update.percentage ?? quiz.percentage,
+  answersPendingGrading: update.answersPendingGrading ?? quiz.answersPendingGrading,
+  requiresManualGrading: update.requiresManualGrading ?? quiz.requiresManualGrading,
+  latestAttemptId: update.latestAttemptId ?? quiz.latestAttemptId,
+  latestAttemptStatus: update.latestAttemptStatus ?? quiz.latestAttemptStatus,
+  startedAt: update.startedAt ?? quiz.startedAt,
+  submittedAt: update.submittedAt ?? quiz.submittedAt,
+});
+
+const hydrateResult = async (quiz: StudentQuizSummary): Promise<StudentQuizSummary> => {
+  let nextQuiz = quiz;
+
+  try {
+    const result = await getStudentQuizResult(quiz.id);
+    nextQuiz = mergeResultFields(nextQuiz, result);
+  } catch {
+    // Keep the list payload when the dedicated result request fails.
+  }
+
+  try {
+    const detail = await getStudentQuizById(quiz.id);
+    nextQuiz = mergeResultFields(nextQuiz, detail);
+  } catch {
+    // Keep whatever result data was successfully collected.
+  }
+
+  const attemptId = nextQuiz.latestAttemptId;
+  if (!attemptId) {
+    return nextQuiz;
+  }
+
+  try {
+    const attempt = await getStudentQuizAttemptDetail(attemptId, nextQuiz.id);
+    nextQuiz = mergeResultFields(nextQuiz, {
+      courseId: attempt.courseId,
+      courseTitle: attempt.courseTitle,
+      totalMarks: attempt.totalMarks,
+      areResultsPublished: attempt.areResultsPublished,
+      score: attempt.score,
+      percentage: attempt.percentage,
+      answersPendingGrading: attempt.answersPendingGrading,
+      requiresManualGrading: attempt.requiresManualGrading,
+      startedAt: attempt.startedAt,
+      submittedAt: attempt.submittedAt,
+    });
+  } catch {
+    return nextQuiz;
+  }
+
+  return nextQuiz;
+};
+
 const renderScoreCell = (quiz: StudentQuizSummary) => {
   if (!quiz.areResultsPublished) {
     return <span className="text-sm text-slate-500">Results are not published yet</span>;
   }
 
-  if (quiz.score == null) {
+  if ((quiz.answersPendingGrading ?? 0) > 0 || quiz.requiresManualGrading === true) {
     return <span className="text-sm font-medium text-amber-700">Awaiting grading</span>;
+  }
+
+  if (quiz.score == null) {
+    if (quiz.percentage != null) {
+      return <span className="font-semibold text-slate-900">{formatPercentage(quiz.percentage)}</span>;
+    }
+
+    return <span className="text-sm text-slate-500">Score unavailable</span>;
   }
 
   return (
@@ -98,7 +174,8 @@ export default function StudentQuizResultsPage() {
 
     try {
       const [quizzes, courses] = await Promise.all([getStudentQuizzes(), getMyStudentCourses()]);
-      const results = sortResults(quizzes.filter((quiz) => hasStudentQuizCompletedAttempt(quiz)));
+      const attemptedQuizzes = quizzes.filter((quiz) => hasStudentQuizCompletedAttempt(quiz));
+      const results = sortResults(await Promise.all(attemptedQuizzes.map((quiz) => hydrateResult(quiz))));
 
       setState({
         loading: false,

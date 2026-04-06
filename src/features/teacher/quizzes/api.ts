@@ -68,6 +68,9 @@ const readBoolean = (record: Record<string, unknown>, keys: string[]): boolean |
   return null;
 };
 
+const hasDefinedValue = (record: Record<string, unknown>, keys: string[]): boolean =>
+  keys.some((key) => key in record && record[key] !== null && record[key] !== undefined);
+
 const readRecord = (
   record: Record<string, unknown>,
   keys: string[],
@@ -251,7 +254,23 @@ const normalizeAttemptAnswer = (
     readNumber(record, ['maxMarks', 'marks']) ??
     (questionRecord ? readNumber(questionRecord, ['marks', 'maxMarks']) : null) ??
     0;
-  const awardedMarks = readNumber(record, ['awardedMarks', 'score', 'earnedMarks']) ?? 0;
+  const awardedMarks = readNumber(record, ['awardedMarks', 'score', 'earnedMarks']);
+  const explicitNeedsManualGrading = readBoolean(record, [
+    'needsManualGrading',
+    'requiresManualGrading',
+    'pendingManualGrade',
+  ]);
+  const gradingStatus = readString(record, ['gradingStatus', 'gradeStatus', 'status']);
+  const isManuallyGraded =
+    questionTypeNeedsManualGrading(questionType) &&
+    (readBoolean(record, ['isGraded', 'graded']) === true ||
+      Boolean(readString(record, ['gradedAt', 'gradedOn'])) ||
+      hasDefinedValue(record, ['teacherFeedback', 'feedback']) ||
+      hasDefinedValue(record, ['awardedMarks', 'score', 'earnedMarks']) ||
+      (typeof gradingStatus === 'string' &&
+        ['graded', 'complete', 'completed', 'reviewed'].some((value) =>
+          gradingStatus.toLowerCase().includes(value),
+        )));
 
   return {
     id:
@@ -274,8 +293,8 @@ const normalizeAttemptAnswer = (
     options,
     teacherFeedback: readString(record, ['teacherFeedback', 'feedback']) ?? '',
     needsManualGrading:
-      readBoolean(record, ['needsManualGrading', 'requiresManualGrading', 'pendingManualGrade']) ??
-      questionTypeNeedsManualGrading(questionType),
+      explicitNeedsManualGrading ??
+      (questionTypeNeedsManualGrading(questionType) ? !isManuallyGraded : false),
   };
 };
 
@@ -326,7 +345,20 @@ const normalizeAttemptDetail = (value: unknown, quizId: string): TeacherQuizAtte
   const record = unwrapEntity(value, ['attempt']);
   const baseAttempt = normalizeAttemptSummary(record);
   const answers = unwrapCollection(record.answers, ['answers']).map(normalizeAttemptAnswer);
-  const answersPendingGrading = answers.filter((answer) => answer.needsManualGrading).length;
+  const explicitAnswersPendingGrading = readNumber(record, [
+    'answersPendingGrading',
+    'pendingManualGrades',
+    'manualGradingCount',
+  ]);
+  const answersPendingGrading =
+    explicitAnswersPendingGrading ?? answers.filter((answer) => answer.needsManualGrading).length;
+  const totalMarksFromAnswers = answers.reduce((total, answer) => total + answer.maxMarks, 0);
+  const scoreFromAnswers = answers.reduce(
+    (total, answer) => total + (answer.awardedMarks ?? 0),
+    0,
+  );
+  const hasAnyAwardedMarks = answers.some((answer) => answer.awardedMarks != null);
+  const explicitRequiresManualGrading = readBoolean(record, ['requiresManualGrading', 'needsManualGrading']);
 
   return {
     ...baseAttempt,
@@ -338,8 +370,14 @@ const normalizeAttemptDetail = (value: unknown, quizId: string): TeacherQuizAtte
       readString(record, ['quizTitle']) ??
       (readRecord(record, ['quiz']) ? readString(readRecord(record, ['quiz'])!, ['title', 'quizTitle']) : null) ??
       'Quiz Attempt',
+    score: hasAnyAwardedMarks ? scoreFromAnswers : baseAttempt.score,
+    totalMarks: totalMarksFromAnswers > 0 ? totalMarksFromAnswers : baseAttempt.totalMarks,
+    percentage:
+      (totalMarksFromAnswers > 0 && hasAnyAwardedMarks
+        ? (scoreFromAnswers / totalMarksFromAnswers) * 100
+        : baseAttempt.percentage),
     requiresManualGrading:
-      baseAttempt.requiresManualGrading || answers.some((answer) => answer.needsManualGrading),
+      explicitRequiresManualGrading ?? answersPendingGrading > 0,
     answersPendingGrading,
     answers,
   };

@@ -70,6 +70,10 @@ export type StudentQuizAttemptAnswer = {
   answerText: string;
   selectedOptionIds: string[];
   fileReference: string | null;
+  awardedMarks: number | null;
+  maxMarks: number | null;
+  teacherFeedback: string | null;
+  needsManualGrading: boolean | null;
 };
 
 export type StudentQuizAttemptDetail = {
@@ -122,6 +126,7 @@ export class StudentQuizApiError extends Error {
 const STUDENT_QUIZZES_PATH = resolveApiPath('/api/v1/student/quizzes');
 const STUDENT_QUIZ_DETAIL_PATH = resolveApiPath('/api/v1/student/quizzes/{quizId}');
 const STUDENT_QUIZ_START_PATH = resolveApiPath('/api/v1/student/quizzes/{quizId}/attempts');
+const STUDENT_QUIZ_RESULT_PATH = resolveApiPath('/api/v1/student/quizzes/{quizId}/result');
 const STUDENT_QUIZ_ATTEMPT_PATH = resolveApiPath('/api/v1/student/quizzes/attempts/{attemptId}');
 const STUDENT_QUIZ_SUBMIT_PATH = resolveApiPath('/api/v1/student/quizzes/attempts/{attemptId}/submit');
 
@@ -171,6 +176,11 @@ const readBoolean = (record: Record<string, unknown>, keys: string[]): boolean |
 
   return null;
 };
+
+const hasDefinedValue = (record: Record<string, unknown>, keys: string[]): boolean =>
+  keys.some((key) => key in record && record[key] !== null && record[key] !== undefined);
+
+const roundScore = (value: number) => Math.round(value * 100) / 100;
 
 const readRecord = (
   record: Record<string, unknown>,
@@ -326,6 +336,17 @@ const normalizeAttemptAnswer = (
     answerText: readString(record, ['answerText', 'responseText', 'text']) ?? '',
     selectedOptionIds: readStringArray(record, ['selectedOptionIds']),
     fileReference: readString(record, ['fileReference', 'fileUrl', 'attachmentUrl']),
+    awardedMarks: readNumber(record, ['awardedMarks', 'score', 'earnedMarks']),
+    maxMarks:
+      readNumber(record, ['maxMarks', 'marks']) ??
+      (questionRecord ? readNumber(questionRecord, ['marks', 'maxMarks']) : null),
+    teacherFeedback: readString(record, ['teacherFeedback', 'feedback']),
+    needsManualGrading:
+      readBoolean(record, ['needsManualGrading', 'requiresManualGrading', 'pendingManualGrade']) ??
+      (hasDefinedValue(record, ['awardedMarks', 'score', 'earnedMarks']) ||
+      hasDefinedValue(record, ['teacherFeedback', 'feedback'])
+        ? false
+        : null),
   };
 };
 
@@ -412,12 +433,32 @@ const extractResultsPublished = (
     'resultsVisible',
   ]);
 
-const extractScore = (
+const extractRawPercentage = (
   record: Record<string, unknown>,
   attemptRecord: Record<string, unknown> | null,
 ) =>
+  (attemptRecord
+    ? readNumber(attemptRecord, ['percentage', 'scorePercent', 'scorePercentage'])
+    : null) ??
+  readNumber(record, ['percentage', 'scorePercent', 'scorePercentage']);
+
+const deriveScoreFromPercentage = (
+  percentage: number | null,
+  totalMarks: number | null,
+) =>
+  percentage != null && totalMarks != null && totalMarks > 0
+    ? roundScore((percentage / 100) * totalMarks)
+    : null;
+
+const extractScore = (
+  record: Record<string, unknown>,
+  attemptRecord: Record<string, unknown> | null,
+  totalMarks: number | null,
+  percentage: number | null,
+) =>
   (attemptRecord ? readNumber(attemptRecord, ['score', 'earnedMarks', 'awardedMarks']) : null) ??
-  readNumber(record, ['score', 'earnedMarks', 'awardedMarks']);
+  readNumber(record, ['score', 'earnedMarks', 'awardedMarks']) ??
+  deriveScoreFromPercentage(percentage, totalMarks);
 
 const extractPercentage = (
   record: Record<string, unknown>,
@@ -425,8 +466,7 @@ const extractPercentage = (
   totalMarks: number | null,
   score: number | null,
 ) =>
-  (attemptRecord ? readNumber(attemptRecord, ['percentage', 'scorePercent', 'scorePercentage']) : null) ??
-  readNumber(record, ['percentage', 'scorePercent', 'scorePercentage']) ??
+  extractRawPercentage(record, attemptRecord) ??
   (score != null && totalMarks != null && totalMarks > 0 ? (score / totalMarks) * 100 : null);
 
 const extractAnswersPendingGrading = (
@@ -546,7 +586,8 @@ const normalizeQuizSummary = (
   const totalMarks =
     (attemptRecord ? readNumber(attemptRecord, ['totalMarks', 'maxMarks']) : null) ??
     readNumber(record, ['totalMarks', 'maxMarks']);
-  const score = extractScore(record, attemptRecord);
+  const rawPercentage = extractRawPercentage(record, attemptRecord);
+  const score = extractScore(record, attemptRecord, totalMarks, rawPercentage);
   const percentage = extractPercentage(record, attemptRecord, totalMarks, score);
   const answersPendingGrading = extractAnswersPendingGrading(record, attemptRecord);
   const requiresManualGrading = extractRequiresManualGrading(
@@ -674,6 +715,169 @@ const mergeStudentQuizSummary = (
   sortOrder: detail.sortOrder ?? summary.sortOrder,
 });
 
+const mergeStudentQuizPartial = (
+  summary: StudentQuizSummary,
+  detail: Partial<StudentQuizSummary>,
+): StudentQuizSummary => ({
+  ...summary,
+  ...detail,
+  id: detail.id ?? summary.id,
+  courseId: detail.courseId ?? summary.courseId,
+  courseTitle: detail.courseTitle ?? summary.courseTitle,
+  title: detail.title ?? summary.title,
+  description: detail.description ?? summary.description,
+  instructions: detail.instructions ?? summary.instructions,
+  durationMinutes: detail.durationMinutes ?? summary.durationMinutes,
+  totalMarks: detail.totalMarks ?? summary.totalMarks,
+  questionCount: detail.questionCount ?? summary.questionCount,
+  status: detail.status ?? summary.status,
+  availableFrom: detail.availableFrom ?? summary.availableFrom,
+  availableUntil: detail.availableUntil ?? summary.availableUntil,
+  availabilityLabel: detail.availabilityLabel ?? summary.availabilityLabel,
+  isPublished: detail.isPublished ?? summary.isPublished,
+  areResultsPublished: detail.areResultsPublished ?? summary.areResultsPublished,
+  isAvailable: detail.isAvailable ?? summary.isAvailable,
+  allowMultipleAttempts: detail.allowMultipleAttempts ?? summary.allowMultipleAttempts,
+  score: detail.score ?? summary.score,
+  percentage: detail.percentage ?? summary.percentage,
+  answersPendingGrading: detail.answersPendingGrading ?? summary.answersPendingGrading,
+  requiresManualGrading: detail.requiresManualGrading ?? summary.requiresManualGrading,
+  attemptCount: detail.attemptCount ?? summary.attemptCount,
+  activeAttemptId: detail.activeAttemptId ?? summary.activeAttemptId,
+  latestAttemptId: detail.latestAttemptId ?? summary.latestAttemptId,
+  latestAttemptStatus: detail.latestAttemptStatus ?? summary.latestAttemptStatus,
+  startedAt: detail.startedAt ?? summary.startedAt,
+  submittedAt: detail.submittedAt ?? summary.submittedAt,
+  timeRemainingSeconds: detail.timeRemainingSeconds ?? summary.timeRemainingSeconds,
+  weekLabel: detail.weekLabel ?? summary.weekLabel,
+  weekNumber: detail.weekNumber ?? summary.weekNumber,
+  moduleTitle: detail.moduleTitle ?? summary.moduleTitle,
+  lessonTitle: detail.lessonTitle ?? summary.lessonTitle,
+  sortOrder: detail.sortOrder ?? summary.sortOrder,
+});
+
+const normalizeStudentQuizResult = (
+  value: unknown,
+  quizId: string,
+): Partial<StudentQuizSummary> => {
+  const record = unwrapEntity(value, ['result', 'quizResult']);
+  const quizRecord = readRecord(record, ['quiz']);
+  const courseRecord =
+    readRecord(record, ['course']) ?? (quizRecord ? readRecord(quizRecord, ['course']) : null);
+  const attemptRecord = extractAttemptRecord(record) ?? (quizRecord ? extractAttemptRecord(quizRecord) : null);
+  const totalMarks =
+    (attemptRecord ? readNumber(attemptRecord, ['totalMarks', 'maxMarks']) : null) ??
+    readNumber(record, ['totalMarks', 'maxMarks']) ??
+    (quizRecord ? readNumber(quizRecord, ['totalMarks', 'maxMarks']) : null);
+  const rawPercentage =
+    (attemptRecord ? readNumber(attemptRecord, ['percentage', 'scorePercent', 'scorePercentage']) : null) ??
+    readNumber(record, ['percentage', 'scorePercent', 'scorePercentage', 'resultPercentage']) ??
+    (quizRecord ? readNumber(quizRecord, ['percentage', 'scorePercent', 'scorePercentage']) : null);
+  const score =
+    (attemptRecord
+      ? readNumber(attemptRecord, [
+          'score',
+          'earnedMarks',
+          'awardedMarks',
+          'obtainedMarks',
+          'marksObtained',
+        ])
+      : null) ??
+    readNumber(record, [
+      'score',
+      'earnedMarks',
+      'awardedMarks',
+      'obtainedMarks',
+      'marksObtained',
+    ]) ??
+    (quizRecord
+      ? readNumber(quizRecord, ['score', 'earnedMarks', 'awardedMarks'])
+      : null) ??
+    deriveScoreFromPercentage(rawPercentage, totalMarks);
+  const percentage =
+    rawPercentage ??
+    (score != null && totalMarks != null && totalMarks > 0 ? (score / totalMarks) * 100 : null);
+  const answersPendingGrading =
+    (attemptRecord
+      ? readNumber(attemptRecord, [
+          'answersPendingGrading',
+          'pendingManualGrades',
+          'manualGradingCount',
+        ])
+      : null) ??
+    readNumber(record, ['answersPendingGrading', 'pendingManualGrades', 'manualGradingCount']);
+  const requiresManualGrading =
+    (attemptRecord
+      ? readBoolean(attemptRecord, [
+          'requiresManualGrading',
+          'needsManualGrading',
+          'pendingManualGrade',
+        ])
+      : null) ??
+    readBoolean(record, ['requiresManualGrading', 'needsManualGrading', 'pendingManualGrade']) ??
+    (answersPendingGrading != null ? answersPendingGrading > 0 : null);
+  const attemptStatus = extractAttemptStatus(record, attemptRecord);
+  const startedAt =
+    extractStartedAt(record, attemptRecord) ?? readString(record, ['attemptedAt', 'startedAt']);
+  const submittedAt =
+    extractSubmittedAt(record, attemptRecord) ??
+    readString(record, ['submittedAt', 'completedAt', 'attemptedAt']);
+  const normalizedAttemptStatus = attemptStatus ? getStudentQuizDisplayStatus(attemptStatus) : null;
+
+  return {
+    id:
+      readString(record, ['quizId', 'id']) ??
+      (quizRecord ? readString(quizRecord, ['id', 'quizId']) : null) ??
+      quizId,
+    courseId:
+      readString(record, ['courseId']) ??
+      (quizRecord ? readString(quizRecord, ['courseId']) : null) ??
+      (courseRecord ? readString(courseRecord, ['id', 'courseId']) : null),
+    courseTitle:
+      readString(record, ['courseTitle', 'courseName']) ??
+      (quizRecord ? readString(quizRecord, ['courseTitle', 'courseName']) : null) ??
+      (courseRecord ? readString(courseRecord, ['title', 'name']) : null),
+    title:
+      readString(record, ['quizTitle', 'title', 'name']) ??
+      (quizRecord ? readString(quizRecord, ['title', 'quizTitle', 'name']) : null) ??
+      'Untitled Quiz',
+    totalMarks,
+    score,
+    percentage,
+    areResultsPublished:
+      (attemptRecord
+        ? readBoolean(attemptRecord, [
+            'areResultsPublished',
+            'resultsPublished',
+            'isResultsPublished',
+            'resultsVisible',
+            'isPublished',
+            'published',
+          ])
+        : null) ??
+      readBoolean(record, [
+        'areResultsPublished',
+        'resultsPublished',
+        'isResultsPublished',
+        'resultsVisible',
+        'isPublished',
+        'published',
+      ]) ??
+      (quizRecord ? readBoolean(quizRecord, ['areResultsPublished', 'resultsPublished']) : null),
+    answersPendingGrading,
+    requiresManualGrading,
+    latestAttemptId:
+      (attemptRecord ? readString(attemptRecord, ['id', 'attemptId']) : null) ??
+      readString(record, ['attemptId', 'latestAttemptId']),
+    latestAttemptStatus:
+      normalizedAttemptStatus ??
+      (submittedAt ? 'Completed' : startedAt ? 'In Progress' : null),
+    startedAt,
+    submittedAt,
+    status: normalizedAttemptStatus ?? (submittedAt ? 'Completed' : startedAt ? 'In Progress' : null),
+  };
+};
+
 const normalizeAttemptDetail = (
   value: unknown,
   quizId: string,
@@ -686,19 +890,43 @@ const normalizeAttemptDetail = (
     ['questions'],
   ).map(normalizeQuestion);
   const answers = unwrapCollection(record.answers, ['answers']).map(normalizeAttemptAnswer);
-  const totalMarks = readNumber(record, ['totalMarks', 'maxMarks']) ?? quizSummary.totalMarks;
-  const score = readNumber(record, ['score', 'earnedMarks', 'awardedMarks']) ?? quizSummary.score;
+  const totalMarksFromAnswers = answers.reduce(
+    (total, answer) => total + (answer.maxMarks ?? 0),
+    0,
+  );
+  const scoreFromAnswers = answers.reduce(
+    (total, answer) => total + (answer.awardedMarks ?? 0),
+    0,
+  );
+  const hasAnyAwardedMarks = answers.some((answer) => answer.awardedMarks != null);
+  const answerNeedsManualFlags = answers
+    .map((answer) => answer.needsManualGrading)
+    .filter((value): value is boolean => value != null);
+  const totalMarks =
+    readNumber(record, ['totalMarks', 'maxMarks']) ??
+    quizSummary.totalMarks ??
+    (totalMarksFromAnswers > 0 ? totalMarksFromAnswers : null);
+  const rawPercentage =
+    readNumber(record, ['percentage', 'scorePercent', 'scorePercentage']) ?? quizSummary.percentage;
+  const score =
+    readNumber(record, ['score', 'earnedMarks', 'awardedMarks']) ??
+    quizSummary.score ??
+    (hasAnyAwardedMarks ? scoreFromAnswers : deriveScoreFromPercentage(rawPercentage, totalMarks));
   const percentage =
-    readNumber(record, ['percentage', 'scorePercent', 'scorePercentage']) ??
+    rawPercentage ??
     (score != null && totalMarks != null && totalMarks > 0
       ? (score / totalMarks) * 100
       : quizSummary.percentage);
   const answersPendingGrading =
     readNumber(record, ['answersPendingGrading', 'pendingManualGrades', 'manualGradingCount']) ??
-    quizSummary.answersPendingGrading;
+    quizSummary.answersPendingGrading ??
+    (answerNeedsManualFlags.length > 0
+      ? answerNeedsManualFlags.filter(Boolean).length
+      : null);
   const requiresManualGrading =
     readBoolean(record, ['requiresManualGrading', 'needsManualGrading', 'pendingManualGrade']) ??
     quizSummary.requiresManualGrading ??
+    (answerNeedsManualFlags.length > 0 ? answerNeedsManualFlags.some(Boolean) : null) ??
     (answersPendingGrading != null ? answersPendingGrading > 0 : null);
 
   return {
@@ -937,14 +1165,27 @@ export async function getStudentQuizSummaryById(
   return quizzes.find((quiz) => quiz.id === quizId) ?? null;
 }
 
+export async function getStudentQuizResult(
+  quizId: string,
+): Promise<Partial<StudentQuizSummary>> {
+  try {
+    const { data } = await apiClient.get<unknown>(buildApiPath(STUDENT_QUIZ_RESULT_PATH, { quizId }));
+    return normalizeStudentQuizResult(data, quizId);
+  } catch (error) {
+    throw convertQuizError(error, 'Unable to load this quiz result.');
+  }
+}
+
 export async function getStudentQuizById(quizId: string): Promise<StudentQuizSummary> {
   try {
-    const [detailResponse, summaryQuiz] = await Promise.all([
+    const [detailResponse, summaryQuiz, resultQuiz] = await Promise.all([
       apiClient.get<unknown>(buildApiPath(STUDENT_QUIZ_DETAIL_PATH, { quizId })),
       getStudentQuizSummaryById(quizId).catch(() => null),
+      getStudentQuizResult(quizId).catch(() => null),
     ]);
     const detailQuiz = normalizeQuizSummary(detailResponse.data);
-    const quiz = summaryQuiz ? mergeStudentQuizSummary(summaryQuiz, detailQuiz) : detailQuiz;
+    const mergedQuiz = summaryQuiz ? mergeStudentQuizSummary(summaryQuiz, detailQuiz) : detailQuiz;
+    const quiz = resultQuiz ? mergeStudentQuizPartial(mergedQuiz, resultQuiz) : mergedQuiz;
 
     return {
       ...quiz,

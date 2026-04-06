@@ -5,10 +5,6 @@
  */
 
 export const apiPaths = {
-  "/api/Materials/{id}": "/api/Materials/{id}",
-  "/api/Materials/{id}/download": "/api/Materials/{id}/download",
-  "/api/Materials/course/{courseId}": "/api/Materials/course/{courseId}",
-  "/api/Materials/upload": "/api/Materials/upload",
   "/api/public/courses": "/api/public/courses",
   "/api/public/courses/{id}": "/api/public/courses/{id}",
   "/api/public/stats": "/api/public/stats",
@@ -41,12 +37,17 @@ export const apiPaths = {
   "/api/v1/student/quizzes": "/api/v1/student/quizzes",
   "/api/v1/student/quizzes/{quizId}": "/api/v1/student/quizzes/{quizId}",
   "/api/v1/student/quizzes/{quizId}/attempts": "/api/v1/student/quizzes/{quizId}/attempts",
+  "/api/v1/student/quizzes/{quizId}/result": "/api/v1/student/quizzes/{quizId}/result",
   "/api/v1/student/quizzes/attempts/{attemptId}": "/api/v1/student/quizzes/attempts/{attemptId}",
   "/api/v1/student/quizzes/attempts/{attemptId}/submit": "/api/v1/student/quizzes/attempts/{attemptId}/submit",
   "/api/v1/teacher/courses": "/api/v1/teacher/courses",
   "/api/v1/teacher/courses/{id}": "/api/v1/teacher/courses/{id}",
   "/api/v1/teacher/dashboard": "/api/v1/teacher/dashboard",
   "/api/v1/teacher/live-classes": "/api/v1/teacher/live-classes",
+  "/api/v1/teacher/materials/{id}": "/api/v1/teacher/materials/{id}",
+  "/api/v1/teacher/materials/{id}/download": "/api/v1/teacher/materials/{id}/download",
+  "/api/v1/teacher/materials/course/{courseId}": "/api/v1/teacher/materials/course/{courseId}",
+  "/api/v1/teacher/materials/upload": "/api/v1/teacher/materials/upload",
   "/api/v1/teacher/quizzes": "/api/v1/teacher/quizzes",
   "/api/v1/teacher/quizzes/{quizId}": "/api/v1/teacher/quizzes/{quizId}",
   "/api/v1/teacher/quizzes/{quizId}/analytics": "/api/v1/teacher/quizzes/{quizId}/analytics",

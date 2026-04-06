@@ -178,9 +178,18 @@ const isStudentQuizAttemptLockedMessage = (message: string) => {
   );
 };
 
-const formatResultScore = (score: number | null, totalMarks: number | null) => {
+const formatResultScore = (
+  score: number | null,
+  totalMarks: number | null,
+  percentage: number | null,
+  fallbackLabel = 'Score unavailable',
+) => {
   if (score == null) {
-    return 'Awaiting grading';
+    if (percentage != null) {
+      return formatPercentage(percentage);
+    }
+
+    return fallbackLabel;
   }
 
   if (totalMarks != null) {
@@ -603,7 +612,7 @@ export default function StudentQuizAttemptPage({
   );
   const unavailable = quiz && isQuizUnavailableStatus(quiz.status) && !attempt;
   const startActionDisabled = unavailable || isQuizSubmittedStatus(quiz?.status);
-  const areResultsPublished = resultSource?.areResultsPublished === true;
+  const areResultsPublished = (attempt?.areResultsPublished ?? quiz?.areResultsPublished) === true;
   const resultScore = attempt?.score ?? quiz?.score ?? null;
   const resultPercentage = attempt?.percentage ?? quiz?.percentage ?? null;
   const resultTotalMarks = attempt?.totalMarks ?? quiz?.totalMarks ?? null;
@@ -731,7 +740,12 @@ export default function StudentQuizAttemptPage({
               label="Score"
               value={
                 areResultsPublished
-                  ? formatResultScore(resultScore, resultTotalMarks)
+                  ? formatResultScore(
+                      resultScore,
+                      resultTotalMarks,
+                      resultPercentage,
+                      resultsAwaitingGrading ? 'Awaiting grading' : 'Score unavailable',
+                    )
                   : 'Hidden until published'
               }
               hint={areResultsPublished && resultPercentage != null ? formatPercentage(resultPercentage) : undefined}

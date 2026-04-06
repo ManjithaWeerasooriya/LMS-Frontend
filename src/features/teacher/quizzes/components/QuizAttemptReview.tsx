@@ -27,7 +27,7 @@ type QuizAttemptReviewProps = {
 type AnswerErrors = Record<string, string | undefined>;
 
 const toInitialDraft = (answer: TeacherQuizAttemptAnswer): ManualGradeDraft => ({
-  awardedMarks: answer.awardedMarks,
+  awardedMarks: answer.awardedMarks ?? 0,
   teacherFeedback: answer.teacherFeedback,
 });
 
@@ -186,7 +186,7 @@ export function QuizAttemptReview({
                 <div className="mt-4 space-y-4">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">
-                      Current score: {formatMarks(answer.awardedMarks)} /{' '}
+                      Current score: {formatMarks(answer.awardedMarks ?? 0)} /{' '}
                       {formatMarks(answer.maxMarks)}
                     </p>
                   </div>

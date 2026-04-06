@@ -1,5 +1,4 @@
 import { apiClient, isAxiosAuthError } from '@/lib/http';
-import { buildApiPath, resolveApiPath } from '@/generated/api-paths';
 
 export type MaterialType = 'pdf' | 'video' | 'assignment' | 'other';
 
@@ -53,9 +52,19 @@ type MaterialDto = {
   sortOrder?: number | null;
 };
 
-const MATERIALS_UPLOAD_PATH = resolveApiPath('/api/Materials/upload');
-const MATERIALS_BY_COURSE_PATH = resolveApiPath('/api/Materials/course/{courseId}');
-const MATERIAL_DOWNLOAD_PATH = resolveApiPath('/api/Materials/{id}/download');
+const MATERIALS_UPLOAD_PATH = '/api/Materials/upload';
+const MATERIALS_BY_COURSE_PATH = '/api/Materials/course/{courseId}';
+const MATERIAL_DOWNLOAD_PATH = '/api/Materials/{id}/download';
+
+const buildRawPath = (template: string, params: Record<string, string | number>) => {
+  let resolved = template;
+
+  for (const [key, value] of Object.entries(params)) {
+    resolved = resolved.replace(new RegExp(`\\{${key}\\}`, 'g'), encodeURIComponent(String(value)));
+  }
+
+  return resolved;
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -165,7 +174,7 @@ export async function uploadMaterial(courseId: string, file: File, title?: strin
 export async function getCourseMaterials(courseId: string): Promise<CourseMaterial[]> {
   try {
     const { data } = await apiClient.get<MaterialDto[]>(
-      buildApiPath(MATERIALS_BY_COURSE_PATH, { courseId }),
+      buildRawPath(MATERIALS_BY_COURSE_PATH, { courseId }),
     );
 
     if (!Array.isArray(data)) {
@@ -196,7 +205,7 @@ export async function downloadMaterial(id: number): Promise<void> {
   }
 
   try {
-    const response = await apiClient.get<Blob>(buildApiPath(MATERIAL_DOWNLOAD_PATH, { id }), {
+    const response = await apiClient.get<Blob>(buildRawPath(MATERIAL_DOWNLOAD_PATH, { id }), {
       responseType: 'blob',
     });
 

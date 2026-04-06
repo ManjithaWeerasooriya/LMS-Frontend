@@ -622,7 +622,7 @@
         }
       }
     },
-    "/api/Materials/upload": {
+    "/api/v1/teacher/materials/upload": {
       "post": {
         "tags": [
           "Materials"
@@ -703,7 +703,7 @@
         }
       }
     },
-    "/api/Materials/course/{courseId}": {
+    "/api/v1/teacher/materials/course/{courseId}": {
       "get": {
         "tags": [
           "Materials"
@@ -726,7 +726,7 @@
         }
       }
     },
-    "/api/Materials/{id}": {
+    "/api/v1/teacher/materials/{id}": {
       "get": {
         "tags": [
           "Materials"
@@ -749,7 +749,7 @@
         }
       }
     },
-    "/api/Materials/{id}/download": {
+    "/api/v1/teacher/materials/{id}/download": {
       "get": {
         "tags": [
           "Materials"
@@ -978,6 +978,29 @@
       }
     },
     "/api/v1/student/quizzes/{quizId}": {
+      "get": {
+        "tags": [
+          "StudentQuizzes"
+        ],
+        "parameters": [
+          {
+            "name": "quizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/student/quizzes/{quizId}/result": {
       "get": {
         "tags": [
           "StudentQuizzes"
