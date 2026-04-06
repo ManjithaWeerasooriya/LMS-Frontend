@@ -24,8 +24,13 @@ export type StudentQuizSummary = {
   availableUntil: string | null;
   availabilityLabel: string | null;
   isPublished: boolean | null;
+  areResultsPublished: boolean | null;
   isAvailable: boolean | null;
   allowMultipleAttempts: boolean | null;
+  score: number | null;
+  percentage: number | null;
+  answersPendingGrading: number | null;
+  requiresManualGrading: boolean | null;
   attemptCount: number;
   activeAttemptId: string | null;
   latestAttemptId: string | null;
@@ -83,8 +88,13 @@ export type StudentQuizAttemptDetail = {
   availableUntil: string | null;
   availabilityLabel: string | null;
   isPublished: boolean | null;
+  areResultsPublished: boolean | null;
   isAvailable: boolean | null;
   allowMultipleAttempts: boolean | null;
+  score: number | null;
+  percentage: number | null;
+  answersPendingGrading: number | null;
+  requiresManualGrading: boolean | null;
   startedAt: string | null;
   submittedAt: string | null;
   timeRemainingSeconds: number | null;
@@ -383,6 +393,70 @@ const extractStartedAt = (
   (attemptRecord ? readString(attemptRecord, ['startedAt', 'startedOn']) : null) ??
   readString(record, ['startedAt', 'startedOn']);
 
+const extractResultsPublished = (
+  record: Record<string, unknown>,
+  attemptRecord: Record<string, unknown> | null,
+) =>
+  (attemptRecord
+    ? readBoolean(attemptRecord, [
+        'areResultsPublished',
+        'resultsPublished',
+        'isResultsPublished',
+        'resultsVisible',
+      ])
+    : null) ??
+  readBoolean(record, [
+    'areResultsPublished',
+    'resultsPublished',
+    'isResultsPublished',
+    'resultsVisible',
+  ]);
+
+const extractScore = (
+  record: Record<string, unknown>,
+  attemptRecord: Record<string, unknown> | null,
+) =>
+  (attemptRecord ? readNumber(attemptRecord, ['score', 'earnedMarks', 'awardedMarks']) : null) ??
+  readNumber(record, ['score', 'earnedMarks', 'awardedMarks']);
+
+const extractPercentage = (
+  record: Record<string, unknown>,
+  attemptRecord: Record<string, unknown> | null,
+  totalMarks: number | null,
+  score: number | null,
+) =>
+  (attemptRecord ? readNumber(attemptRecord, ['percentage', 'scorePercent', 'scorePercentage']) : null) ??
+  readNumber(record, ['percentage', 'scorePercent', 'scorePercentage']) ??
+  (score != null && totalMarks != null && totalMarks > 0 ? (score / totalMarks) * 100 : null);
+
+const extractAnswersPendingGrading = (
+  record: Record<string, unknown>,
+  attemptRecord: Record<string, unknown> | null,
+) =>
+  (attemptRecord
+    ? readNumber(attemptRecord, [
+        'answersPendingGrading',
+        'pendingManualGrades',
+        'manualGradingCount',
+      ])
+    : null) ??
+  readNumber(record, ['answersPendingGrading', 'pendingManualGrades', 'manualGradingCount']);
+
+const extractRequiresManualGrading = (
+  record: Record<string, unknown>,
+  attemptRecord: Record<string, unknown> | null,
+  answersPendingGrading: number | null,
+) =>
+  (attemptRecord
+    ? readBoolean(attemptRecord, [
+        'requiresManualGrading',
+        'needsManualGrading',
+        'pendingManualGrade',
+      ])
+    : null) ??
+  readBoolean(record, ['requiresManualGrading', 'needsManualGrading', 'pendingManualGrade']) ??
+  (answersPendingGrading != null ? answersPendingGrading > 0 : null);
+
 const extractAttemptCount = (
   record: Record<string, unknown>,
   attemptRecord: Record<string, unknown> | null,
@@ -469,6 +543,17 @@ const normalizeQuizSummary = (
   const startedAt = extractStartedAt(record, attemptRecord);
   const attemptCount = extractAttemptCount(record, attemptRecord);
   const inferredStatus = inferQuizStatus(record, attemptRecord);
+  const totalMarks =
+    (attemptRecord ? readNumber(attemptRecord, ['totalMarks', 'maxMarks']) : null) ??
+    readNumber(record, ['totalMarks', 'maxMarks']);
+  const score = extractScore(record, attemptRecord);
+  const percentage = extractPercentage(record, attemptRecord, totalMarks, score);
+  const answersPendingGrading = extractAnswersPendingGrading(record, attemptRecord);
+  const requiresManualGrading = extractRequiresManualGrading(
+    record,
+    attemptRecord,
+    answersPendingGrading,
+  );
 
   const normalizedQuiz: StudentQuizSummary = {
     id: readString(record, ['id', 'quizId']) ?? '',
@@ -482,7 +567,7 @@ const normalizeQuizSummary = (
     description: readString(record, ['description', 'summary']),
     instructions: readString(record, ['instructions', 'instructionText', 'description', 'summary']),
     durationMinutes: readNumber(record, ['durationMinutes', 'duration']),
-    totalMarks: readNumber(record, ['totalMarks', 'maxMarks']),
+    totalMarks,
     questionCount:
       readNumber(record, ['questionCount', 'questionsCount', 'totalQuestions']) ??
       questions.length,
@@ -491,8 +576,13 @@ const normalizeQuizSummary = (
     availableUntil: readString(record, ['endTimeUtc', 'endsAt', 'availableUntil']),
     availabilityLabel: readString(record, ['availabilityLabel', 'availability', 'availabilityText']),
     isPublished: readBoolean(record, ['isPublished', 'published']),
+    areResultsPublished: extractResultsPublished(record, attemptRecord),
     isAvailable: readBoolean(record, ['isAvailable', 'available']),
     allowMultipleAttempts: readBoolean(record, ['allowMultipleAttempts']),
+    score,
+    percentage,
+    answersPendingGrading,
+    requiresManualGrading,
     attemptCount,
     activeAttemptId:
       (attemptRecord ? readString(attemptRecord, ['id', 'attemptId']) : null) ??
@@ -563,8 +653,13 @@ const mergeStudentQuizSummary = (
   availableUntil: detail.availableUntil ?? summary.availableUntil,
   availabilityLabel: detail.availabilityLabel ?? summary.availabilityLabel,
   isPublished: detail.isPublished ?? summary.isPublished,
+  areResultsPublished: detail.areResultsPublished ?? summary.areResultsPublished,
   isAvailable: detail.isAvailable ?? summary.isAvailable,
   allowMultipleAttempts: detail.allowMultipleAttempts ?? summary.allowMultipleAttempts,
+  score: detail.score ?? summary.score,
+  percentage: detail.percentage ?? summary.percentage,
+  answersPendingGrading: detail.answersPendingGrading ?? summary.answersPendingGrading,
+  requiresManualGrading: detail.requiresManualGrading ?? summary.requiresManualGrading,
   attemptCount: Math.max(detail.attemptCount, summary.attemptCount),
   activeAttemptId: detail.activeAttemptId ?? summary.activeAttemptId,
   latestAttemptId: detail.latestAttemptId ?? summary.latestAttemptId,
@@ -591,6 +686,20 @@ const normalizeAttemptDetail = (
     ['questions'],
   ).map(normalizeQuestion);
   const answers = unwrapCollection(record.answers, ['answers']).map(normalizeAttemptAnswer);
+  const totalMarks = readNumber(record, ['totalMarks', 'maxMarks']) ?? quizSummary.totalMarks;
+  const score = readNumber(record, ['score', 'earnedMarks', 'awardedMarks']) ?? quizSummary.score;
+  const percentage =
+    readNumber(record, ['percentage', 'scorePercent', 'scorePercentage']) ??
+    (score != null && totalMarks != null && totalMarks > 0
+      ? (score / totalMarks) * 100
+      : quizSummary.percentage);
+  const answersPendingGrading =
+    readNumber(record, ['answersPendingGrading', 'pendingManualGrades', 'manualGradingCount']) ??
+    quizSummary.answersPendingGrading;
+  const requiresManualGrading =
+    readBoolean(record, ['requiresManualGrading', 'needsManualGrading', 'pendingManualGrade']) ??
+    quizSummary.requiresManualGrading ??
+    (answersPendingGrading != null ? answersPendingGrading > 0 : null);
 
   return {
     id: readString(record, ['id', 'attemptId']) ?? '',
@@ -615,7 +724,7 @@ const normalizeAttemptDetail = (
       readString(record, ['instructions', 'instructionText']) ?? quizSummary.instructions,
     durationMinutes:
       readNumber(record, ['durationMinutes', 'duration']) ?? quizSummary.durationMinutes,
-    totalMarks: readNumber(record, ['totalMarks', 'maxMarks']) ?? quizSummary.totalMarks,
+    totalMarks,
     questionCount:
       readNumber(record, ['questionCount', 'questionsCount', 'totalQuestions']) ??
       (questions.length > 0 ? questions.length : quizSummary.questionCount),
@@ -628,9 +737,20 @@ const normalizeAttemptDetail = (
       readString(record, ['availabilityLabel', 'availability', 'availabilityText']) ??
       quizSummary.availabilityLabel,
     isPublished: readBoolean(record, ['isPublished', 'published']) ?? quizSummary.isPublished,
+    areResultsPublished:
+      readBoolean(record, [
+        'areResultsPublished',
+        'resultsPublished',
+        'isResultsPublished',
+        'resultsVisible',
+      ]) ?? quizSummary.areResultsPublished,
     isAvailable: readBoolean(record, ['isAvailable', 'available']) ?? quizSummary.isAvailable,
     allowMultipleAttempts:
       readBoolean(record, ['allowMultipleAttempts']) ?? quizSummary.allowMultipleAttempts,
+    score,
+    percentage,
+    answersPendingGrading,
+    requiresManualGrading,
     startedAt: readString(record, ['startedAt', 'startedOn']),
     submittedAt: readString(record, ['submittedAt', 'completedAt', 'submittedOn']),
     timeRemainingSeconds:
@@ -715,6 +835,52 @@ export const isQuizUnavailableStatus = (status?: string | null) =>
 
 export const isQuizRetakeAvailableStatus = (status?: string | null) =>
   typeof status === 'string' && status.toLowerCase().includes('retake');
+
+type StudentQuizAttemptState = {
+  attemptCount?: number;
+  activeAttemptId?: string | null;
+  latestAttemptId?: string | null;
+  status?: string | null;
+  latestAttemptStatus?: string | null;
+  startedAt?: string | null;
+  submittedAt?: string | null;
+};
+
+export const hasStudentQuizAttempt = (quiz?: StudentQuizAttemptState | null) => {
+  if (!quiz) {
+    return false;
+  }
+
+  return Boolean(
+    (quiz.attemptCount ?? 0) > 0 ||
+      quiz.activeAttemptId ||
+      quiz.latestAttemptId ||
+      quiz.startedAt ||
+      quiz.submittedAt ||
+      isQuizInProgressStatus(quiz.status) ||
+      isQuizSubmittedStatus(quiz.status) ||
+      isQuizRetakeAvailableStatus(quiz.status) ||
+      isQuizInProgressStatus(quiz.latestAttemptStatus) ||
+      isQuizSubmittedStatus(quiz.latestAttemptStatus),
+  );
+};
+
+export const hasStudentQuizCompletedAttempt = (quiz?: StudentQuizAttemptState | null) => {
+  if (!quiz) {
+    return false;
+  }
+
+  return Boolean(
+    quiz.submittedAt ||
+      isQuizSubmittedStatus(quiz.status) ||
+      isQuizRetakeAvailableStatus(quiz.status) ||
+      isQuizSubmittedStatus(quiz.latestAttemptStatus) ||
+      ((quiz.attemptCount ?? 0) > 0 &&
+        !quiz.activeAttemptId &&
+        !isQuizInProgressStatus(quiz.status) &&
+        !isQuizInProgressStatus(quiz.latestAttemptStatus)),
+  );
+};
 
 export const createEmptyStudentQuizDraft = (questionId: string): StudentQuizAnswerDraft => ({
   questionId,

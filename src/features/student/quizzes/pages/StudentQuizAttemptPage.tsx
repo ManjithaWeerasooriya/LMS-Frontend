@@ -29,6 +29,7 @@ import {
   getStudentQuizAttemptDetail,
   getStudentQuizById,
   getStudentQuizErrorMessage,
+  hasStudentQuizCompletedAttempt,
   isQuizInProgressStatus,
   isQuizRetakeAvailableStatus,
   isQuizSubmittedStatus,
@@ -48,7 +49,7 @@ import {
   QuizSectionCard,
   QuizStatePanel,
 } from '@/features/teacher/quizzes/components/QuizShared';
-import { formatDateTime } from '@/features/teacher/quizzes/utils';
+import { formatDateTime, formatMarks, formatPercentage } from '@/features/teacher/quizzes/utils';
 import { logoutUser } from '@/lib/auth';
 
 type StudentQuizAttemptPageProps = {
@@ -175,6 +176,18 @@ const isStudentQuizAttemptLockedMessage = (message: string) => {
     normalized.includes('already attempted') ||
     normalized.includes('attempt limit')
   );
+};
+
+const formatResultScore = (score: number | null, totalMarks: number | null) => {
+  if (score == null) {
+    return 'Awaiting grading';
+  }
+
+  if (totalMarks != null) {
+    return `${formatMarks(score)} / ${formatMarks(totalMarks)}`;
+  }
+
+  return formatMarks(score);
 };
 
 export default function StudentQuizAttemptPage({
@@ -581,7 +594,8 @@ export default function StudentQuizAttemptPage({
   const attempt = state.attempt;
   const quiz = state.quiz;
   const course = state.enrolledCourse;
-  const readOnly = isQuizSubmittedStatus(attempt?.status ?? quiz?.status);
+  const resultSource = attempt ?? quiz;
+  const readOnly = hasStudentQuizCompletedAttempt(resultSource);
   const activeQuestions = useMemo(() => attempt?.questions ?? [], [attempt?.questions]);
   const answeredCount = useMemo(
     () => activeQuestions.filter((question) => isDraftAnswered(drafts[question.id])).length,
@@ -589,6 +603,16 @@ export default function StudentQuizAttemptPage({
   );
   const unavailable = quiz && isQuizUnavailableStatus(quiz.status) && !attempt;
   const startActionDisabled = unavailable || isQuizSubmittedStatus(quiz?.status);
+  const areResultsPublished = resultSource?.areResultsPublished === true;
+  const resultScore = attempt?.score ?? quiz?.score ?? null;
+  const resultPercentage = attempt?.percentage ?? quiz?.percentage ?? null;
+  const resultTotalMarks = attempt?.totalMarks ?? quiz?.totalMarks ?? null;
+  const resultSubmittedAt = attempt?.submittedAt ?? quiz?.submittedAt ?? null;
+  const resultsAwaitingGrading =
+    areResultsPublished &&
+    resultScore == null &&
+    ((attempt?.requiresManualGrading ?? quiz?.requiresManualGrading) === true ||
+      (attempt?.answersPendingGrading ?? quiz?.answersPendingGrading ?? 0) > 0);
 
   if (state.loading) {
     return (
@@ -622,7 +646,9 @@ export default function StudentQuizAttemptPage({
         title={quiz?.title ?? 'Quiz'}
         description={
           quiz?.description ??
-          'Review the quiz instructions, start or continue your attempt, and submit once you finish answering.'
+          (readOnly
+            ? 'Review your submitted quiz status and any published results.'
+            : 'Review the quiz instructions, start or continue your attempt, and submit once you finish answering.')
         }
         backHref={`/student/dashboard/courses/${courseId}`}
         actions={[
@@ -690,7 +716,53 @@ export default function StudentQuizAttemptPage({
         </div>
       ) : null}
 
-      {quiz && !attempt ? (
+      {readOnly ? (
+        <QuizSectionCard
+          title="Quiz results"
+          description="This quiz has already been attempted. Result visibility depends on whether your instructor has published the results."
+        >
+          <div className="grid gap-4 md:grid-cols-4">
+            <QuizMetricCard label="Attempt Status" value="Attempted" />
+            <QuizMetricCard
+              label="Result State"
+              value={areResultsPublished ? 'Published' : 'Not published'}
+            />
+            <QuizMetricCard
+              label="Score"
+              value={
+                areResultsPublished
+                  ? formatResultScore(resultScore, resultTotalMarks)
+                  : 'Hidden until published'
+              }
+              hint={areResultsPublished && resultPercentage != null ? formatPercentage(resultPercentage) : undefined}
+            />
+            <QuizMetricCard
+              label="Submitted"
+              value={resultSubmittedAt ? formatDateTime(resultSubmittedAt) : 'Attempt recorded'}
+            />
+          </div>
+
+          <div
+            className={`mt-4 rounded-2xl border p-4 text-sm ${
+              areResultsPublished
+                ? resultsAwaitingGrading
+                  ? 'border-amber-200 bg-amber-50 text-amber-800'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                : 'border-slate-200 bg-slate-50 text-slate-700'
+            }`}
+          >
+            {areResultsPublished
+              ? resultsAwaitingGrading
+                ? 'Results are published, but grading is still in progress.'
+                : resultScore == null
+                  ? 'Results are published. Score details are not available yet.'
+                  : 'Results are published and available for review.'
+              : 'Results are not published yet.'}
+          </div>
+        </QuizSectionCard>
+      ) : null}
+
+      {quiz && !attempt && !readOnly ? (
         <QuizSectionCard
           title="Quiz overview"
           description="Start the quiz when you are ready. If an attempt already exists, this action resumes it."
@@ -725,13 +797,6 @@ export default function StudentQuizAttemptPage({
                   </p>
                 </div>
               </div>
-
-              {isQuizSubmittedStatus(quiz.status) ? (
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-                  This quiz has already been submitted. If the backend exposes a submitted attempt
-                  later, this page will show it in read-only mode.
-                </div>
-              ) : null}
 
               {unavailable ? (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
@@ -768,6 +833,14 @@ export default function StudentQuizAttemptPage({
             </aside>
           </div>
         </QuizSectionCard>
+      ) : null}
+
+      {quiz && !attempt && readOnly ? (
+        <QuizStatePanel
+          title="Attempt recorded"
+          message="This quiz has already been submitted. The backend did not return question-by-question review data for this attempt, but your result status is shown above."
+          tone="neutral"
+        />
       ) : null}
 
       {attempt ? (
@@ -842,7 +915,11 @@ export default function StudentQuizAttemptPage({
             <>
               <QuizSectionCard
                 title="Question navigation"
-                description="Jump between questions while your current answers stay in local component state."
+                description={
+                  readOnly
+                    ? 'Jump between questions to review the submitted attempt.'
+                    : 'Jump between questions while your current answers stay in local component state.'
+                }
               >
                 <div className="flex flex-wrap gap-2">
                   {attempt.questions.map((question, index) => {

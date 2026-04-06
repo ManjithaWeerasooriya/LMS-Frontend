@@ -50,7 +50,7 @@ const formatAvailability = (quiz: StudentCourseQuiz) =>
 
 const getQuizActionLabel = (quiz: StudentCourseQuiz) => {
   if (isQuizSubmittedStatus(quiz.status)) {
-    return 'View submission';
+    return 'View results';
   }
 
   if (isQuizInProgressStatus(quiz.status)) {
