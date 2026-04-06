@@ -12,6 +12,7 @@ import type {
 import {
   QUIZ_QUESTION_TYPES,
   questionTypeNeedsManualGrading,
+  type TeacherQuizAnalytics,
   type TeacherQuizAttemptAnswer,
   type TeacherQuizAttemptDetail,
   type TeacherQuizAttemptSummary,
@@ -131,6 +132,45 @@ const unwrapEntity = (value: unknown, keys: string[] = []): Record<string, unkno
   }
 
   return value;
+};
+
+const normalizeQuizAnalytics = (value: unknown): TeacherQuizAnalytics => {
+  const record = unwrapEntity(value, ['quizAnalytics', 'analytics', 'quiz']);
+
+  return {
+    quizId: readString(record, ['quizId', 'id']) ?? '',
+    quizTitle:
+      readString(record, ['quizTitle', 'title']) ??
+      (readRecord(record, ['quiz']) ? readString(readRecord(record, ['quiz'])!, ['title']) : null) ??
+      'Quiz',
+    courseId: readString(record, ['courseId']) ?? '',
+    courseTitle: readString(record, ['courseTitle']) ?? 'Course',
+    totalMarks: readNumber(record, ['totalMarks', 'maxMarks']) ?? 0,
+    averageScore: readNumber(record, ['averageScore']) ?? 0,
+    highestScore: readNumber(record, ['highestScore']) ?? 0,
+    lowestScore: readNumber(record, ['lowestScore']) ?? 0,
+    passPercentage: readNumber(record, ['passPercentage', 'passRate']) ?? 0,
+    failPercentage: readNumber(record, ['failPercentage', 'failRate']) ?? 0,
+    participationRate: readNumber(record, ['participationRate', 'participation']) ?? 0,
+    totalEnrolledStudents: readNumber(record, ['totalEnrolledStudents']) ?? 0,
+    studentsParticipated: readNumber(record, ['studentsParticipated', 'participants']) ?? 0,
+  };
+};
+
+const mockTeacherQuizAnalytics: TeacherQuizAnalytics = {
+  quizId: '11111111-1111-1111-1111-111111111111',
+  quizTitle: 'Unit 3 – Grammar Quiz',
+  courseId: '22222222-2222-2222-2222-222222222222',
+  courseTitle: 'Intermediate English B1',
+  totalMarks: 100,
+  averageScore: 74.25,
+  highestScore: 98,
+  lowestScore: 32,
+  passPercentage: 68.75,
+  failPercentage: 31.25,
+  participationRate: 82.5,
+  totalEnrolledStudents: 40,
+  studentsParticipated: 33,
 };
 
 const normalizeQuestionType = (value: unknown): QuestionType => {
@@ -391,6 +431,15 @@ export const getTeacherQuizErrorMessage = (
 export async function getTeacherQuizzesByCourse(courseId: string): Promise<TeacherQuizSummary[]> {
   const { data } = await apiClient.get<unknown>(`/api/v1/teacher/quizzes/course/${courseId}`);
   return unwrapCollection(data, ['quizzes']).map(normalizeQuiz);
+}
+
+export async function getTeacherQuizAnalytics(
+  quizId: string,
+): Promise<TeacherQuizAnalytics> {
+  const { data } = await apiClient.get<unknown>(
+    `/api/v1/teacher/quizzes/${quizId}/analytics`,
+  );
+  return normalizeQuizAnalytics(data);
 }
 
 export async function getTeacherQuizById(quizId: string): Promise<TeacherQuizDetail> {

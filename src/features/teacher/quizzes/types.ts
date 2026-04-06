@@ -130,6 +130,22 @@ export type ManualGradeFormValue = {
   teacherFeedback: string;
 };
 
+export type TeacherQuizAnalytics = {
+  quizId: string;
+  quizTitle: string;
+  courseId: string;
+  courseTitle: string;
+  totalMarks: number;
+  averageScore: number;
+  highestScore: number;
+  lowestScore: number;
+  passPercentage: number;
+  failPercentage: number;
+  participationRate: number;
+  totalEnrolledStudents: number;
+  studentsParticipated: number;
+};
+
 export const quizQuestionTypeOptions: Array<{
   label: string;
   value: SupportedQuizQuestionType;
