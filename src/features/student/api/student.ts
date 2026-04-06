@@ -1,4 +1,5 @@
 import { apiClient, isAxiosAuthError } from '@/lib/http';
+import { buildApiPath, resolveApiPath } from '@/generated/api-paths';
 import type { StudentCourseListItemDto, StudentDashboardResponseDto } from '@/generated/api-types';
 
 export type StudentDashboardSummary = {
@@ -34,6 +35,9 @@ export type StudentCourseListItem = {
   title: string;
   category: string | null;
   instructorName: string | null;
+  description: string | null;
+  thumbnailUrl: string | null;
+  progressPercent: number | null;
   studentsEnrolled: number | null;
   price: number | null;
   rating: number | null;
@@ -57,7 +61,9 @@ export async function getStudentDashboard(): Promise<{
   pendingQuizzes: StudentDashboardQuiz[];
 }> {
   try {
-    const { data } = await apiClient.get<StudentDashboardResponseDto>('/api/v1/student/dashboard');
+    const { data } = await apiClient.get<StudentDashboardResponseDto>(
+      resolveApiPath('/api/v1/student/dashboard'),
+    );
 
     return {
       summary: {
@@ -87,58 +93,125 @@ export async function getStudentDashboard(): Promise<{
       })),
     };
   } catch (error) {
-    throw convertAxiosError(error);
+    throw convertStudentAxiosError(error, 'Unable to load student dashboard.');
   }
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const readString = (record: Record<string, unknown>, keys: string[]): string | null => {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return null;
+};
+
+const readNumber = (record: Record<string, unknown>, keys: string[]): number | null => {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim()) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+};
+
+const buildCourseDescription = (title: string, rawDescription: string | null): string | null => {
+  if (rawDescription) {
+    return rawDescription;
+  }
+
+  return `${title} is available from your student dashboard. Course details will appear here as content is published.`;
+};
+
 function normalizeStudentCourse(course: StudentCourseListItemDto): StudentCourseListItem {
+  const record = (isRecord(course) ? course : {}) as StudentCourseListItemDto & Record<string, unknown>;
+  const title = readString(record, ['title', 'name']) ?? 'Untitled Course';
+
   return {
-    id: course.id ?? '',
-    title: course.title?.trim() || 'Untitled Course',
-    category: course.category?.trim() || null,
-    instructorName: course.instructorName?.trim() || null,
+    id: readString(record, ['id', 'courseId']) ?? '',
+    title,
+    category: readString(record, ['category']) ?? null,
+    instructorName:
+      readString(record, [
+        'instructorName',
+        'teacherName',
+        'teacherFullName',
+        'teacherDisplayName',
+        'instructorFullName',
+        'instructorDisplayName',
+      ]) ?? null,
+    description: buildCourseDescription(
+      title,
+      readString(record, ['description', 'summary', 'shortDescription']),
+    ),
+    thumbnailUrl:
+      readString(record, ['thumbnailUrl', 'imageUrl', 'coverImageUrl', 'thumbnail', 'image']) ??
+      null,
+    progressPercent: readNumber(record, ['progressPercent', 'progress']) ?? null,
     studentsEnrolled:
-      typeof course.studentsEnrolled === 'number' ? course.studentsEnrolled : null,
-    price: typeof course.price === 'number' ? course.price : null,
-    rating: typeof course.rating === 'number' ? course.rating : null,
-    isEnrolled: Boolean(course.isEnrolled),
+      readNumber(record, ['studentsEnrolled', 'students', 'studentCount', 'enrollmentCount']) ??
+      null,
+    price: readNumber(record, ['price']) ?? null,
+    rating: readNumber(record, ['rating']) ?? null,
+    isEnrolled: Boolean(record.isEnrolled),
   };
 }
 
 export async function getStudentCourses(search?: string): Promise<StudentCourseListItem[]> {
   try {
-    const { data } = await apiClient.get<StudentCourseListItemDto[]>('/api/v1/student/courses', {
-      params: search?.trim() ? { search: search.trim() } : undefined,
-    });
+    const params = search?.trim() ? { search: search.trim() } : undefined;
+    const { data } = await apiClient.get<StudentCourseListItemDto[]>(
+      resolveApiPath('/api/v1/student/courses'),
+      { params },
+    );
 
     return (data ?? []).map(normalizeStudentCourse).filter((course) => course.id);
   } catch (error) {
-    throw convertAxiosError(error);
+    throw convertStudentAxiosError(error, 'Unable to load student courses.');
   }
 }
 
 export async function getMyStudentCourses(): Promise<StudentCourseListItem[]> {
   try {
-    const { data } = await apiClient.get<StudentCourseListItemDto[]>('/api/v1/student/courses/my');
+    const { data } = await apiClient.get<StudentCourseListItemDto[]>(
+      resolveApiPath('/api/v1/student/courses/my'),
+    );
     return (data ?? []).map(normalizeStudentCourse).filter((course) => course.id);
   } catch (error) {
-    throw convertAxiosError(error);
+    throw convertStudentAxiosError(error, 'Unable to load enrolled courses.');
   }
 }
 
 export async function enrollInStudentCourse(courseId: string): Promise<void> {
   try {
-    await apiClient.post(`/api/v1/student/courses/${courseId}/enroll`);
+    await apiClient.post(
+      buildApiPath('/api/v1/student/courses/{courseId}/enroll', { courseId }),
+    );
   } catch (error) {
-    throw convertAxiosError(error);
+    throw convertStudentAxiosError(error, 'Unable to enroll in this course.');
   }
 }
 
-function convertAxiosError(error: unknown): never {
+export function convertStudentAxiosError(
+  error: unknown,
+  fallback = 'Unable to load student data.',
+): never {
   if (isAxiosAuthError(error) && error.response) {
     const message =
-      (error.response.data as { message?: string } | undefined)?.message ??
-      'Unable to load student dashboard.';
+      (error.response.data as { message?: string } | undefined)?.message ?? fallback;
     throw new StudentApiError(message, error.response.status);
   }
 
@@ -146,5 +219,5 @@ function convertAxiosError(error: unknown): never {
     throw new StudentApiError(error.message, 0);
   }
 
-  throw new StudentApiError('Unable to load student dashboard.', 0);
+  throw new StudentApiError(fallback, 0);
 }
