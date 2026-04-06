@@ -12,23 +12,30 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+const MockLink = React.forwardRef<HTMLAnchorElement, React.ComponentProps<'a'>>(
+  ({ href, children, ...props }, ref) => {
+    const hrefObject = typeof href === 'object' && href !== null ? (href as { pathname?: string }) : null;
+    const resolvedHref =
+      typeof href === 'string'
+        ? href
+        : hrefObject && typeof hrefObject.pathname === 'string'
+          ? hrefObject.pathname ?? '#'
+          : '#';
+
+    return (
+      <a href={resolvedHref} ref={ref} {...props}>
+        {children}
+      </a>
+    );
+  },
+);
+
+MockLink.displayName = 'MockLink';
+
 vi.mock('next/link', () => {
   return {
     __esModule: true,
-    default: React.forwardRef<HTMLAnchorElement, React.ComponentProps<'a'>>(({ href, children, ...props }, ref) => {
-      const hrefObject = typeof href === 'object' && href !== null ? (href as { pathname?: string }) : null;
-      const resolvedHref =
-        typeof href === 'string'
-          ? href
-          : hrefObject && typeof hrefObject.pathname === 'string'
-            ? hrefObject.pathname
-            : '#';
-      return (
-        <a href={resolvedHref} ref={ref} {...props}>
-          {children}
-        </a>
-      );
-    }),
+    default: MockLink,
   };
 });
 
