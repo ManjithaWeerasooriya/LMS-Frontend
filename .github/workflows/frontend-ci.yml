@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [dev, main]
 
+env:
+  NEXT_TELEMETRY_DISABLED: 1
+  RUN_SELENIUM: ${{ vars.RUN_SELENIUM || 'false' }}
+  E2E_BASE_URL: ${{ vars.E2E_BASE_URL || '' }}
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -34,5 +39,20 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Unit & integration tests
+        run: npm run test -- --run
+
+      - name: Coverage report
+        run: npm run test:coverage
+
       - name: Build
         run: npm run build
+
+      - name: Selenium E2E (optional)
+        if: env.RUN_SELENIUM == 'true'
+        run: npm run test:e2e
+        env:
+          INSTRUCTOR_EMAIL: ${{ secrets.INSTRUCTOR_EMAIL }}
+          INSTRUCTOR_PASSWORD: ${{ secrets.INSTRUCTOR_PASSWORD }}
+          STUDENT_EMAIL: ${{ secrets.STUDENT_EMAIL }}
+          STUDENT_PASSWORD: ${{ secrets.STUDENT_PASSWORD }}
