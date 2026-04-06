@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 import { registerUser, RegisterError, type RegisterPayload, type RegistrationRole } from '@/lib/auth';
+import { withRedirect } from '@/lib/navigation';
 
 type FieldErrors = Partial<Record<'email' | 'password' | 'confirmPassword' | 'terms', string>>;
 
@@ -19,6 +20,7 @@ type RegistrationFormProps = {
   description?: string;
   successInstruction: string;
   submitLabel: string;
+  redirectTo?: string;
 };
 
 type FormValues = {
@@ -39,7 +41,15 @@ const initialValues: FormValues = {
   acceptedTerms: false,
 };
 
-export function RegistrationForm({ role, title, subtitle, description, successInstruction, submitLabel }: RegistrationFormProps) {
+export function RegistrationForm({
+  role,
+  title,
+  subtitle,
+  description,
+  successInstruction,
+  submitLabel,
+  redirectTo,
+}: RegistrationFormProps) {
   const [values, setValues] = useState<FormValues>(initialValues);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formStatus, setFormStatus] = useState<FormStatus>({ type: null, message: '' });
@@ -139,7 +149,15 @@ export function RegistrationForm({ role, title, subtitle, description, successIn
         <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
           <p className="font-semibold">{formStatus.message}</p>
           <p className="mt-2 text-sm">{successInstruction}</p>
-          <p className="mt-2 text-sm">Use the link below to return to the login page whenever you&apos;re ready.</p>
+          <p className="mt-2 text-sm">
+            Use the link below to return to the login page whenever you&apos;re ready.
+          </p>
+          <Link
+            href={withRedirect('/login', redirectTo)}
+            className="mt-4 inline-flex rounded-2xl border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+          >
+            Continue to login
+          </Link>
         </div>
       ) : null}
 
@@ -294,7 +312,10 @@ export function RegistrationForm({ role, title, subtitle, description, successIn
 
       <p className="mt-6 text-center text-sm text-slate-600">
         Already have an account?{' '}
-        <Link href="/login" className="font-semibold text-blue-800 hover:text-blue-600">
+        <Link
+          href={withRedirect('/login', redirectTo)}
+          className="font-semibold text-blue-800 hover:text-blue-600"
+        >
           Back to Login
         </Link>
       </p>

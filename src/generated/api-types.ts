@@ -80,13 +80,26 @@ export type CreateCourseRequestDto = {
   "status"?: string | null;
 };
 
+export type CreateQuestionDto = {
+  "text": string;
+  "type": QuestionType;
+  "marks"?: number;
+  "orderIndex"?: number;
+  "options"?: Array<QuestionOptionRequestDto> | null;
+};
+
 export type CreateQuizDto = {
   "courseId": string;
   "title": string;
+  "description"?: string | null;
   "durationMinutes"?: number;
+  "startTimeUtc"?: string;
+  "endTimeUtc"?: string;
   "totalMarks"?: number;
-  "passingMarks"?: number;
+  "randomizeQuestions"?: boolean;
+  "allowMultipleAttempts"?: boolean;
   "isPublished"?: boolean;
+  "areResultsPublished"?: boolean;
 };
 
 export type EnrollmentGrowthPointDto = {
@@ -135,6 +148,11 @@ export type LogoutRequest = {
   "deviceId"?: string | null;
 };
 
+export type ManualGradeAnswerDto = {
+  "awardedMarks"?: number;
+  "teacherFeedback"?: string | null;
+};
+
 export type PerformanceBandDto = {
   "excellentPercentage"?: number;
   "goodPercentage"?: number;
@@ -142,23 +160,20 @@ export type PerformanceBandDto = {
   "needsImprovementPercentage"?: number;
 };
 
+export type QuestionOptionRequestDto = {
+  "text": string;
+  "isCorrect"?: boolean;
+  "orderIndex"?: number;
+};
+
+export type QuestionType = 1 | 2 | 3 | 4 | 5 | 6;
+
 export type QuizAverageScoreDto = {
   "quizId"?: string;
   "quizTitle"?: string | null;
   "courseTitle"?: string | null;
   "averageScorePercent"?: number;
   "attempts"?: number;
-};
-
-export type QuizResponseDto = {
-  "id"?: string;
-  "courseId"?: string;
-  "title"?: string | null;
-  "durationMinutes"?: number;
-  "totalMarks"?: number;
-  "passingMarks"?: number;
-  "isPublished"?: boolean;
-  "createdAt"?: string;
 };
 
 export type QuizStatisticsDto = {
@@ -249,6 +264,17 @@ export type StudentDashboardSummaryDto = {
   "pendingQuizzes"?: number;
 };
 
+export type SubmitQuizAttemptDto = {
+  "answers": Array<SubmitStudentAnswerDto>;
+};
+
+export type SubmitStudentAnswerDto = {
+  "questionId": string;
+  "selectedOptionIds"?: Array<string> | null;
+  "answerText"?: string | null;
+  "fileReference"?: string | null;
+};
+
 export type SuspendUserDto = {
   "userId"?: string | null;
   "reason"?: string | null;
@@ -309,12 +335,25 @@ export type UpdateMyProfileRequest = {
   "phone"?: string | null;
 };
 
+export type UpdateQuestionDto = {
+  "text": string;
+  "type": QuestionType;
+  "marks"?: number;
+  "orderIndex"?: number;
+  "options"?: Array<QuestionOptionRequestDto> | null;
+};
+
 export type UpdateQuizDto = {
   "title": string;
+  "description"?: string | null;
   "durationMinutes"?: number;
+  "startTimeUtc"?: string;
+  "endTimeUtc"?: string;
   "totalMarks"?: number;
-  "passingMarks"?: number;
+  "randomizeQuestions"?: boolean;
+  "allowMultipleAttempts"?: boolean;
   "isPublished"?: boolean;
+  "areResultsPublished"?: boolean;
 };
 
 export type UserProfileRequest = {

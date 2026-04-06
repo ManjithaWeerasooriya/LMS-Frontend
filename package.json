@@ -7,27 +7,37 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "generate:api-types": "node scripts/generate-openapi-types.mjs"
+    "generate:api-types": "node scripts/generate-openapi-types.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "axios": "^1.13.5",
+    "dotenv": "^17.4.1",
     "lucide-react": "^0.575.0",
     "next": "16.1.6",
-    "recharts": "^2.13.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.2",
+    "recharts": "^2.13.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.6.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^2.1.9",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "jsdom": "^24.1.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.0.5"
   }
 }

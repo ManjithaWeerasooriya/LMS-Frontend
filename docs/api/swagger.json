@@ -678,144 +678,6 @@
         }
       }
     },
-    "/api/Quiz": {
-      "post": {
-        "tags": [
-          "Quiz"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateQuizDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateQuizDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateQuizDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
-    "/api/Quiz/course/{courseId}": {
-      "get": {
-        "tags": [
-          "Quiz"
-        ],
-        "parameters": [
-          {
-            "name": "courseId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
-    "/api/Quiz/{quizId}": {
-      "get": {
-        "tags": [
-          "Quiz"
-        ],
-        "parameters": [
-          {
-            "name": "quizId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Quiz"
-        ],
-        "parameters": [
-          {
-            "name": "quizId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateQuizDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateQuizDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateQuizDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Quiz"
-        ],
-        "parameters": [
-          {
-            "name": "quizId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
     "/api/v1/student/courses": {
       "get": {
         "tags": [
@@ -949,6 +811,129 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/student/quizzes": {
+      "get": {
+        "tags": [
+          "StudentQuizzes"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/student/quizzes/{quizId}": {
+      "get": {
+        "tags": [
+          "StudentQuizzes"
+        ],
+        "parameters": [
+          {
+            "name": "quizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/student/quizzes/{quizId}/attempts": {
+      "post": {
+        "tags": [
+          "StudentQuizzes"
+        ],
+        "parameters": [
+          {
+            "name": "quizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/student/quizzes/attempts/{attemptId}": {
+      "get": {
+        "tags": [
+          "StudentQuizzes"
+        ],
+        "parameters": [
+          {
+            "name": "attemptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/student/quizzes/attempts/{attemptId}/submit": {
+      "post": {
+        "tags": [
+          "StudentQuizzes"
+        ],
+        "parameters": [
+          {
+            "name": "attemptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitQuizAttemptDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitQuizAttemptDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitQuizAttemptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
           }
         }
       }
@@ -1226,6 +1211,295 @@
         }
       }
     },
+    "/api/v1/teacher/quizzes/{quizId}/attempts": {
+      "get": {
+        "tags": [
+          "TeacherQuizAttempts"
+        ],
+        "parameters": [
+          {
+            "name": "quizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/teacher/quizzes/{quizId}/attempts/{attemptId}": {
+      "get": {
+        "tags": [
+          "TeacherQuizAttempts"
+        ],
+        "parameters": [
+          {
+            "name": "quizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "attemptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/teacher/quizzes/{quizId}/attempts/{attemptId}/answers/{answerId}/grade": {
+      "put": {
+        "tags": [
+          "TeacherQuizAttempts"
+        ],
+        "parameters": [
+          {
+            "name": "quizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "attemptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "answerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualGradeAnswerDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualGradeAnswerDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualGradeAnswerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/teacher/quizzes/{quizId}/questions": {
+      "get": {
+        "tags": [
+          "TeacherQuizQuestions"
+        ],
+        "parameters": [
+          {
+            "name": "quizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "TeacherQuizQuestions"
+        ],
+        "parameters": [
+          {
+            "name": "quizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuestionDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuestionDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuestionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/teacher/quizzes/{quizId}/questions/{questionId}": {
+      "get": {
+        "tags": [
+          "TeacherQuizQuestions"
+        ],
+        "parameters": [
+          {
+            "name": "quizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "TeacherQuizQuestions"
+        ],
+        "parameters": [
+          {
+            "name": "quizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQuestionDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQuestionDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQuestionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "TeacherQuizQuestions"
+        ],
+        "parameters": [
+          {
+            "name": "quizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
     "/api/v1/teacher/quizzes/course/{courseId}": {
       "get": {
         "tags": [
@@ -1244,33 +1518,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/QuizResponseDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/QuizResponseDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/QuizResponseDto"
-                  }
-                }
-              }
-            }
+            "description": "Success"
           }
         }
       }
@@ -1293,24 +1541,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/QuizResponseDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/QuizResponseDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/QuizResponseDto"
-                }
-              }
-            }
+            "description": "Success"
           }
         }
       },
@@ -1400,6 +1631,52 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/teacher/quizzes/{quizId}/results/publish": {
+      "post": {
+        "tags": [
+          "TeacherQuizzes"
+        ],
+        "parameters": [
+          {
+            "name": "quizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/teacher/quizzes/{quizId}/results/unpublish": {
+      "post": {
+        "tags": [
+          "TeacherQuizzes"
+        ],
+        "parameters": [
+          {
+            "name": "quizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success"
@@ -1835,6 +2112,43 @@
         },
         "additionalProperties": false
       },
+      "CreateQuestionDto": {
+        "required": [
+          "text",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/QuestionType"
+          },
+          "marks": {
+            "maximum": 999999,
+            "minimum": 0.01,
+            "type": "number",
+            "format": "double"
+          },
+          "orderIndex": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionOptionRequestDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CreateQuizDto": {
         "required": [
           "courseId",
@@ -1851,25 +2165,41 @@
             "minLength": 1,
             "type": "string"
           },
+          "description": {
+            "maxLength": 4000,
+            "type": "string",
+            "nullable": true
+          },
           "durationMinutes": {
             "maximum": 500,
             "minimum": 1,
             "type": "integer",
             "format": "int32"
           },
-          "totalMarks": {
-            "maximum": 2147483647,
-            "minimum": 0,
-            "type": "integer",
-            "format": "int32"
+          "startTimeUtc": {
+            "type": "string",
+            "format": "date-time"
           },
-          "passingMarks": {
-            "maximum": 2147483647,
-            "minimum": 0,
-            "type": "integer",
-            "format": "int32"
+          "endTimeUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "totalMarks": {
+            "maximum": 999999,
+            "minimum": 0.01,
+            "type": "number",
+            "format": "double"
+          },
+          "randomizeQuestions": {
+            "type": "boolean"
+          },
+          "allowMultipleAttempts": {
+            "type": "boolean"
           },
           "isPublished": {
+            "type": "boolean"
+          },
+          "areResultsPublished": {
             "type": "boolean"
           }
         },
@@ -2027,6 +2357,23 @@
         },
         "additionalProperties": false
       },
+      "ManualGradeAnswerDto": {
+        "type": "object",
+        "properties": {
+          "awardedMarks": {
+            "maximum": 999999,
+            "minimum": 0,
+            "type": "number",
+            "format": "double"
+          },
+          "teacherFeedback": {
+            "maxLength": 2000,
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "PerformanceBandDto": {
         "type": "object",
         "properties": {
@@ -2048,6 +2395,41 @@
           }
         },
         "additionalProperties": false
+      },
+      "QuestionOptionRequestDto": {
+        "required": [
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "isCorrect": {
+            "type": "boolean"
+          },
+          "orderIndex": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "QuestionType": {
+        "enum": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "type": "integer",
+        "format": "int32"
       },
       "QuizAverageScoreDto": {
         "type": "object",
@@ -2071,43 +2453,6 @@
           "attempts": {
             "type": "integer",
             "format": "int32"
-          }
-        },
-        "additionalProperties": false
-      },
-      "QuizResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "courseId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "title": {
-            "type": "string",
-            "nullable": true
-          },
-          "durationMinutes": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "totalMarks": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "passingMarks": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "isPublished": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
           }
         },
         "additionalProperties": false
@@ -2416,6 +2761,53 @@
         },
         "additionalProperties": false
       },
+      "SubmitQuizAttemptDto": {
+        "required": [
+          "answers"
+        ],
+        "type": "object",
+        "properties": {
+          "answers": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubmitStudentAnswerDto"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SubmitStudentAnswerDto": {
+        "required": [
+          "questionId"
+        ],
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "selectedOptionIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          },
+          "answerText": {
+            "maxLength": 8000,
+            "type": "string",
+            "nullable": true
+          },
+          "fileReference": {
+            "maxLength": 1000,
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "SuspendUserDto": {
         "type": "object",
         "properties": {
@@ -2624,6 +3016,43 @@
         },
         "additionalProperties": false
       },
+      "UpdateQuestionDto": {
+        "required": [
+          "text",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/QuestionType"
+          },
+          "marks": {
+            "maximum": 999999,
+            "minimum": 0.01,
+            "type": "number",
+            "format": "double"
+          },
+          "orderIndex": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionOptionRequestDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "UpdateQuizDto": {
         "required": [
           "title"
@@ -2635,25 +3064,41 @@
             "minLength": 1,
             "type": "string"
           },
+          "description": {
+            "maxLength": 4000,
+            "type": "string",
+            "nullable": true
+          },
           "durationMinutes": {
             "maximum": 500,
             "minimum": 1,
             "type": "integer",
             "format": "int32"
           },
-          "totalMarks": {
-            "maximum": 2147483647,
-            "minimum": 0,
-            "type": "integer",
-            "format": "int32"
+          "startTimeUtc": {
+            "type": "string",
+            "format": "date-time"
           },
-          "passingMarks": {
-            "maximum": 2147483647,
-            "minimum": 0,
-            "type": "integer",
-            "format": "int32"
+          "endTimeUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "totalMarks": {
+            "maximum": 999999,
+            "minimum": 0.01,
+            "type": "number",
+            "format": "double"
+          },
+          "randomizeQuestions": {
+            "type": "boolean"
+          },
+          "allowMultipleAttempts": {
+            "type": "boolean"
           },
           "isPublished": {
+            "type": "boolean"
+          },
+          "areResultsPublished": {
             "type": "boolean"
           }
         },
