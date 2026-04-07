@@ -11,6 +11,12 @@ export type CourseMaterial = {
   uploadedAt: string;
   fileSizeBytes: number;
   materialType: MaterialType;
+  description: string | null;
+  weekLabel: string | null;
+  weekNumber: number | null;
+  moduleTitle: string | null;
+  lessonTitle: string | null;
+  sortOrder: number | null;
 };
 
 export class MaterialsApiError extends Error {
@@ -32,9 +38,64 @@ type MaterialDto = {
   uploadedAt?: string | null;
   fileSizeBytes?: number | null;
   materialType?: string | null;
+  description?: string | null;
+  weekLabel?: string | null;
+  weekNumber?: number | null;
+  week?: string | number | null;
+  moduleTitle?: string | null;
+  moduleName?: string | null;
+  module?: string | null;
+  lessonTitle?: string | null;
+  lessonName?: string | null;
+  lesson?: string | null;
+  orderIndex?: number | null;
+  sortOrder?: number | null;
 };
 
-const MATERIALS_BASE = '/api/materials';
+const MATERIALS_UPLOAD_PATH = '/api/Materials/upload';
+const MATERIALS_BY_COURSE_PATH = '/api/Materials/course/{courseId}';
+const MATERIAL_DOWNLOAD_PATH = '/api/Materials/{id}/download';
+
+const buildRawPath = (template: string, params: Record<string, string | number>) => {
+  let resolved = template;
+
+  for (const [key, value] of Object.entries(params)) {
+    resolved = resolved.replace(new RegExp(`\\{${key}\\}`, 'g'), encodeURIComponent(String(value)));
+  }
+
+  return resolved;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const readString = (record: Record<string, unknown>, keys: string[]): string | null => {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return null;
+};
+
+const readNumber = (record: Record<string, unknown>, keys: string[]): number | null => {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim()) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+};
 
 const normalizeMaterialType = (value?: string | null, fileName?: string | null): MaterialType => {
   const normalized = value?.trim().toLowerCase();
@@ -49,16 +110,33 @@ const normalizeMaterialType = (value?: string | null, fileName?: string | null):
   return 'other';
 };
 
-const toCourseMaterial = (dto: MaterialDto): CourseMaterial => ({
-  id: typeof dto.id === 'number' ? dto.id : 0,
-  courseId: dto.courseId ?? '',
-  title: dto.title?.trim() || dto.fileName?.trim() || 'Untitled material',
-  fileName: dto.fileName?.trim() || 'material',
-  fileUrl: dto.fileUrl?.trim() || null,
-  uploadedAt: dto.uploadedAt ?? new Date().toISOString(),
-  fileSizeBytes: typeof dto.fileSizeBytes === 'number' ? dto.fileSizeBytes : 0,
-  materialType: normalizeMaterialType(dto.materialType, dto.fileName ?? undefined),
-});
+const toCourseMaterial = (dto: MaterialDto): CourseMaterial => {
+  const record = (isRecord(dto) ? dto : {}) as MaterialDto & Record<string, unknown>;
+
+  return {
+    id: readNumber(record, ['id']) ?? 0,
+    courseId: readString(record, ['courseId']) ?? '',
+    title: readString(record, ['title', 'name']) ?? readString(record, ['fileName']) ?? 'Untitled material',
+    fileName: readString(record, ['fileName']) ?? 'material',
+    fileUrl: readString(record, ['fileUrl', 'url']) ?? null,
+    uploadedAt: readString(record, ['uploadedAt', 'createdAt']) ?? new Date().toISOString(),
+    fileSizeBytes: readNumber(record, ['fileSizeBytes', 'sizeInBytes', 'size']) ?? 0,
+    materialType: normalizeMaterialType(
+      readString(record, ['materialType', 'type']),
+      readString(record, ['fileName']),
+    ),
+    description: readString(record, ['description', 'summary']),
+    weekLabel:
+      readString(record, ['weekLabel', 'weekName']) ??
+      (typeof record.week === 'string' && record.week.trim() ? record.week.trim() : null),
+    weekNumber:
+      readNumber(record, ['weekNumber']) ??
+      (typeof record.week === 'number' && Number.isFinite(record.week) ? record.week : null),
+    moduleTitle: readString(record, ['moduleTitle', 'moduleName', 'module']),
+    lessonTitle: readString(record, ['lessonTitle', 'lessonName', 'lesson']),
+    sortOrder: readNumber(record, ['sortOrder', 'orderIndex']),
+  };
+};
 
 const convertAxiosError = (error: unknown): never => {
   if (isAxiosAuthError(error) && error.response) {
@@ -85,7 +163,7 @@ export async function uploadMaterial(courseId: string, file: File, title?: strin
       payload.append('title', title.trim());
     }
 
-    const response = await apiClient.post<MaterialDto>(`${MATERIALS_BASE}/upload`, payload);
+    const response = await apiClient.post<MaterialDto>(MATERIALS_UPLOAD_PATH, payload);
 
     return toCourseMaterial(response.data);
   } catch (error) {
@@ -95,7 +173,9 @@ export async function uploadMaterial(courseId: string, file: File, title?: strin
 
 export async function getCourseMaterials(courseId: string): Promise<CourseMaterial[]> {
   try {
-    const { data } = await apiClient.get<MaterialDto[]>(`${MATERIALS_BASE}/course/${courseId}`);
+    const { data } = await apiClient.get<MaterialDto[]>(
+      buildRawPath(MATERIALS_BY_COURSE_PATH, { courseId }),
+    );
 
     if (!Array.isArray(data)) {
       return [];
@@ -125,7 +205,7 @@ export async function downloadMaterial(id: number): Promise<void> {
   }
 
   try {
-    const response = await apiClient.get<Blob>(`${MATERIALS_BASE}/${id}/download`, {
+    const response = await apiClient.get<Blob>(buildRawPath(MATERIAL_DOWNLOAD_PATH, { id }), {
       responseType: 'blob',
     });
 

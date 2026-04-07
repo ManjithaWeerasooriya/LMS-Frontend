@@ -75,6 +75,36 @@ export default function TeacherQuizAttemptReviewPage({
 
     try {
       await manualGradeTeacherQuizAnswer(quizId, attemptId, answerId, value);
+      setAttempt((current) => {
+        if (!current) {
+          return current;
+        }
+
+        const nextAnswers = current.answers.map((answer) =>
+          answer.id === answerId
+            ? {
+                ...answer,
+                awardedMarks: value.awardedMarks,
+                teacherFeedback: value.teacherFeedback,
+                needsManualGrading: false,
+              }
+            : answer,
+        );
+        const nextScore = nextAnswers.reduce(
+          (total, answer) => total + (answer.awardedMarks ?? 0),
+          0,
+        );
+        const nextPendingManual = nextAnswers.filter((answer) => answer.needsManualGrading).length;
+
+        return {
+          ...current,
+          answers: nextAnswers,
+          score: nextScore,
+          percentage: current.totalMarks > 0 ? (nextScore / current.totalMarks) * 100 : 0,
+          answersPendingGrading: nextPendingManual,
+          requiresManualGrading: nextPendingManual > 0,
+        };
+      });
       await load();
     } catch (gradeError) {
       setError(getTeacherQuizErrorMessage(gradeError, 'Unable to save the manual grade.'));
