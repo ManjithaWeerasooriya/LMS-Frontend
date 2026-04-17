@@ -21,6 +21,7 @@ import {
 
 import { AppNavbar } from '@/components/AppNavbar';
 import { useConfirm } from '@/context/ConfirmContext';
+import { CurrentUserProfileProvider } from '@/hooks/useCurrentUserProfile';
 import {
   decodeJwt,
   getStoredAuthToken,
@@ -243,65 +244,69 @@ export default function TeacherDashboardLayout({ children }: { children: ReactNo
   }
 
   return (
-    <div className="flex h-screen bg-slate-100">
-      <aside
-        className={`flex h-full flex-shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white px-4 py-6 text-slate-900 transition-[width] duration-200 ${
-          isMobileSidebarExpanded ? 'w-72' : 'w-20 md:w-72'
-        }`}
-      >
-        <div
-          className={`flex items-center ${
-            isMobileSidebarExpanded ? 'gap-3 px-2' : 'justify-center px-0 md:justify-start md:gap-3 md:px-2'
+    <CurrentUserProfileProvider>
+      <div className="flex h-screen bg-slate-100">
+        <aside
+          className={`flex h-full flex-shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white px-4 py-6 text-slate-900 transition-[width] duration-200 ${
+            isMobileSidebarExpanded ? 'w-72' : 'w-20 md:w-72'
           }`}
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#1B3B8B] text-white">
-            <span className="text-lg font-semibold">GE</span>
-          </div>
-          <div className={isMobileSidebarExpanded ? 'block' : 'hidden md:block'}>
-            <p className="text-sm font-semibold leading-tight">Genuine English</p>
-            <p className="text-xs text-slate-500">Tutor Console</p>
-          </div>
-        </div>
-
-        <nav className="mt-8 flex-1">
-          <ul className="space-y-1 text-sm">{sidebarItems}</ul>
-        </nav>
-
-        <div className="mt-6 border-t border-slate-200 pt-4">
-          <button
-            type="button"
-            onClick={handleLogout}
-            className={`inline-flex w-full items-center gap-3 rounded-2xl py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 ${
-              isMobileSidebarExpanded ? 'justify-start px-5' : 'justify-center px-0 md:justify-start md:px-5'
+          <div
+            className={`flex items-center ${
+              isMobileSidebarExpanded ? 'gap-3 px-2' : 'justify-center px-0 md:justify-start md:gap-3 md:px-2'
             }`}
           >
-            <LogOut className="h-4 w-4" />
-            <span className={isMobileSidebarExpanded ? 'inline' : 'hidden md:inline'}>Logout</span>
-          </button>
-        </div>
-      </aside>
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#1B3B8B] text-white">
+              <span className="text-lg font-semibold">GE</span>
+            </div>
+            <div className={isMobileSidebarExpanded ? 'block' : 'hidden md:block'}>
+              <p className="text-sm font-semibold leading-tight">Genuine English</p>
+              <p className="text-xs text-slate-500">Tutor Console</p>
+            </div>
+          </div>
 
-      <div className="flex h-full flex-1 flex-col">
-        <AppNavbar
-          leading={
+          <nav className="mt-8 flex-1">
+            <ul className="space-y-1 text-sm">{sidebarItems}</ul>
+          </nav>
+
+          <div className="mt-6 border-t border-slate-200 pt-4">
             <button
               type="button"
-              onClick={() => setIsMobileSidebarExpanded((prev) => !prev)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 md:hidden"
-              aria-label={isMobileSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+              onClick={handleLogout}
+              className={`inline-flex w-full items-center gap-3 rounded-2xl py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 ${
+                isMobileSidebarExpanded ? 'justify-start px-5' : 'justify-center px-0 md:justify-start md:px-5'
+              }`}
             >
-              {isMobileSidebarExpanded ? (
-                <PanelLeftClose className="h-4 w-4" />
-              ) : (
-                <Menu className="h-4 w-4" />
-              )}
+              <LogOut className="h-4 w-4" />
+              <span className={isMobileSidebarExpanded ? 'inline' : 'hidden md:inline'}>Logout</span>
             </button>
-          }
-          contentClassName="flex w-full items-center justify-between px-4 py-3 md:px-6"
-        />
+          </div>
+        </aside>
 
-        <main className="flex-1 overflow-y-auto bg-slate-100 px-4 py-6 md:px-6">{children}</main>
+        <div className="flex h-full flex-1 flex-col">
+          <AppNavbar
+            leading={
+              <button
+                type="button"
+                onClick={() => setIsMobileSidebarExpanded((prev) => !prev)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 md:hidden"
+                aria-label={isMobileSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+              >
+                {isMobileSidebarExpanded ? (
+                  <PanelLeftClose className="h-4 w-4" />
+                ) : (
+                  <Menu className="h-4 w-4" />
+                )}
+              </button>
+            }
+            contentClassName="flex w-full items-center justify-between px-4 py-3 md:px-6"
+          />
+
+          <main className="flex-1 overflow-y-auto bg-slate-100 px-4 py-6 md:px-6">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </CurrentUserProfileProvider>
   );
 }

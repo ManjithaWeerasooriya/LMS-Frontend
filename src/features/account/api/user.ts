@@ -13,6 +13,7 @@ export type UserProfile = {
   firstName?: string | null;
   lastName?: string | null;
   phone?: string | null;
+  profileImageUrl?: string | null;
   status?: string;
   createdAt?: string;
   lastLoginAt?: string | null;
@@ -31,6 +32,20 @@ export class UserApiError extends Error {
 }
 
 const { BASE_URL } = apiConfig;
+
+function mapUserProfile(data: UserProfileRequest): UserProfile {
+  return {
+    id: data.id ?? '',
+    email: data.email ?? '',
+    firstName: data.firstName ?? null,
+    lastName: data.lastName ?? null,
+    phone: data.phone ?? null,
+    profileImageUrl: data.profileImageUrl ?? null,
+    status: data.status != null ? String(data.status) : undefined,
+    createdAt: data.createdAt,
+    lastLoginAt: data.lastLoginAt ?? null,
+  };
+}
 
 async function parseError(response: Response): Promise<{ message: string; details?: string[] }> {
   try {
@@ -89,16 +104,7 @@ function extractErrors(payload: unknown): { message: string; details?: string[] 
 export async function getMyProfile(): Promise<UserProfile> {
   try {
     const { data } = await apiClient.get<UserProfileRequest>('/api/v1/users/me');
-    return {
-      id: data.id ?? '',
-      email: data.email ?? '',
-      firstName: data.firstName ?? null,
-      lastName: data.lastName ?? null,
-      phone: data.phone ?? null,
-      status: data.status != null ? String(data.status) : undefined,
-      createdAt: data.createdAt,
-      lastLoginAt: data.lastLoginAt ?? null,
-    };
+    return mapUserProfile(data);
   } catch (error) {
     throw convertAxiosError(error);
   }
@@ -107,16 +113,19 @@ export async function getMyProfile(): Promise<UserProfile> {
 export async function updateMyProfile(payload: UpdateMyProfileRequest): Promise<UserProfile> {
   try {
     const { data } = await apiClient.put<UserProfileRequest>('/api/v1/users/me', payload);
-    return {
-      id: data.id ?? '',
-      email: data.email ?? '',
-      firstName: data.firstName ?? null,
-      lastName: data.lastName ?? null,
-      phone: data.phone ?? null,
-      status: data.status != null ? String(data.status) : undefined,
-      createdAt: data.createdAt,
-      lastLoginAt: data.lastLoginAt ?? null,
-    };
+    return mapUserProfile(data);
+  } catch (error) {
+    throw convertAxiosError(error);
+  }
+}
+
+export async function uploadProfileImage(file: File): Promise<UserProfile> {
+  try {
+    const payload = new FormData();
+    payload.append('File', file);
+
+    const { data } = await apiClient.post<UserProfileRequest>('/api/v1/users/profile-image', payload);
+    return mapUserProfile(data);
   } catch (error) {
     throw convertAxiosError(error);
   }

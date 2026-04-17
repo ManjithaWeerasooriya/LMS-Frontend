@@ -362,6 +362,7 @@ export type UserProfileRequest = {
   "firstName"?: string | null;
   "lastName"?: string | null;
   "phone"?: string | null;
+  "profileImageUrl"?: string | null;
   "status"?: UserStatus;
   "createdAt"?: string;
   "lastLoginAt"?: string | null;
