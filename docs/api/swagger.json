@@ -317,6 +317,35 @@
         }
       }
     },
+    "/api/v1/admin/system/test-azure-connections": {
+      "post": {
+        "tags": [
+          "AdminSystem"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AzureConnectionDiagnosticsResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AzureConnectionDiagnosticsResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AzureConnectionDiagnosticsResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/Auth/register": {
       "post": {
         "tags": [
@@ -614,6 +643,98 @@
       "get": {
         "tags": [
           "Demo"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/live-sessions/{sessionId}/join-token": {
+      "post": {
+        "tags": [
+          "LiveSessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/live-sessions/{sessionId}/attendance/join": {
+      "post": {
+        "tags": [
+          "LiveSessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/live-sessions/{sessionId}/attendance/leave": {
+      "post": {
+        "tags": [
+          "LiveSessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/live-sessions/{sessionId}/recording": {
+      "get": {
+        "tags": [
+          "LiveSessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -961,6 +1082,52 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/student/courses/{courseId}/live-sessions": {
+      "get": {
+        "tags": [
+          "StudentLiveSessions"
+        ],
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/student/live-sessions/{sessionId}": {
+      "get": {
+        "tags": [
+          "StudentLiveSessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
           }
         }
       }
@@ -1377,6 +1544,247 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/teacher/courses/{courseId}/live-sessions": {
+      "post": {
+        "tags": [
+          "TeacherLiveSessions"
+        ],
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLiveSessionRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLiveSessionRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLiveSessionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "TeacherLiveSessions"
+        ],
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/teacher/live-sessions/{sessionId}": {
+      "put": {
+        "tags": [
+          "TeacherLiveSessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLiveSessionRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLiveSessionRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLiveSessionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "TeacherLiveSessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/teacher/live-sessions/{sessionId}/start": {
+      "post": {
+        "tags": [
+          "TeacherLiveSessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/teacher/live-sessions/{sessionId}/end": {
+      "post": {
+        "tags": [
+          "TeacherLiveSessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/teacher/live-sessions/{sessionId}/recording/start": {
+      "post": {
+        "tags": [
+          "TeacherLiveSessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/teacher/live-sessions/{sessionId}/recording/stop": {
+      "post": {
+        "tags": [
+          "TeacherLiveSessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/teacher/live-sessions/{sessionId}/attendance": {
+      "get": {
+        "tags": [
+          "TeacherLiveSessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success"
@@ -1986,6 +2394,58 @@
         }
       }
     },
+    "/api/v1/Users/profile-image": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "File"
+                ],
+                "type": "object",
+                "properties": {
+                  "File": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "File": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileRequest"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileRequest"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileRequest"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/Users/me/delete-request": {
       "post": {
         "tags": [
@@ -2058,6 +2518,38 @@
               "$ref": "#/components/schemas/LiveSessionSummaryDto"
             },
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AzureConnectionDiagnosticResultDto": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AzureConnectionDiagnosticsResponseDto": {
+        "type": "object",
+        "properties": {
+          "mySql": {
+            "$ref": "#/components/schemas/AzureConnectionDiagnosticResultDto"
+          },
+          "azureBlobStorage": {
+            "$ref": "#/components/schemas/AzureConnectionDiagnosticResultDto"
+          },
+          "azureCommunicationServices": {
+            "$ref": "#/components/schemas/AzureConnectionDiagnosticResultDto"
           }
         },
         "additionalProperties": false
@@ -2308,6 +2800,60 @@
         },
         "additionalProperties": false
       },
+      "CreateLiveSessionRequestDto": {
+        "required": [
+          "startTime",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 4000,
+            "type": "string",
+            "nullable": true
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationMinutes": {
+            "maximum": 1440,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LiveSessionStatus"
+          },
+          "recordingEnabled": {
+            "type": "boolean"
+          },
+          "playbackEnabled": {
+            "type": "boolean"
+          },
+          "acsRoomId": {
+            "maxLength": 200,
+            "type": "string",
+            "nullable": true
+          },
+          "acsCallLocator": {
+            "maxLength": 500,
+            "type": "string",
+            "nullable": true
+          },
+          "chatThreadId": {
+            "maxLength": 200,
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CreateQuestionDto": {
         "required": [
           "text",
@@ -2490,6 +3036,16 @@
           }
         },
         "additionalProperties": false
+      },
+      "LiveSessionStatus": {
+        "enum": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "type": "integer",
+        "format": "int32"
       },
       "LiveSessionSummaryDto": {
         "type": "object",
@@ -3188,6 +3744,60 @@
         },
         "additionalProperties": false
       },
+      "UpdateLiveSessionRequestDto": {
+        "required": [
+          "startTime",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 4000,
+            "type": "string",
+            "nullable": true
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationMinutes": {
+            "maximum": 1440,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LiveSessionStatus"
+          },
+          "recordingEnabled": {
+            "type": "boolean"
+          },
+          "playbackEnabled": {
+            "type": "boolean"
+          },
+          "acsRoomId": {
+            "maxLength": 200,
+            "type": "string",
+            "nullable": true
+          },
+          "acsCallLocator": {
+            "maxLength": 500,
+            "type": "string",
+            "nullable": true
+          },
+          "chatThreadId": {
+            "maxLength": 200,
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "UpdateMyProfileRequest": {
         "type": "object",
         "properties": {
@@ -3320,6 +3930,10 @@
             "nullable": true
           },
           "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "profileImageUrl": {
             "type": "string",
             "nullable": true
           },

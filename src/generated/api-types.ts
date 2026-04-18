@@ -13,6 +13,18 @@ export type AttendanceStatisticsDto = {
   "upcomingSessionDetails"?: Array<LiveSessionSummaryDto> | null;
 };
 
+export type AzureConnectionDiagnosticResultDto = {
+  "success"?: boolean;
+  "message"?: string | null;
+  "checkedAt"?: string;
+};
+
+export type AzureConnectionDiagnosticsResponseDto = {
+  "mySql"?: AzureConnectionDiagnosticResultDto;
+  "azureBlobStorage"?: AzureConnectionDiagnosticResultDto;
+  "azureCommunicationServices"?: AzureConnectionDiagnosticResultDto;
+};
+
 export type ChangePasswordRequest = {
   "currentPassword": string;
   "newPassword": string;
@@ -80,6 +92,19 @@ export type CreateCourseRequestDto = {
   "status"?: string | null;
 };
 
+export type CreateLiveSessionRequestDto = {
+  "title": string;
+  "description"?: string | null;
+  "startTime": string;
+  "durationMinutes"?: number;
+  "status"?: LiveSessionStatus;
+  "recordingEnabled"?: boolean;
+  "playbackEnabled"?: boolean;
+  "acsRoomId"?: string | null;
+  "acsCallLocator"?: string | null;
+  "chatThreadId"?: string | null;
+};
+
 export type CreateQuestionDto = {
   "text": string;
   "type": QuestionType;
@@ -127,6 +152,8 @@ export type LiveClassListItemDto = {
   "studentsEnrolled"?: number;
   "meetingLink"?: string | null;
 };
+
+export type LiveSessionStatus = 1 | 2 | 3 | 4;
 
 export type LiveSessionSummaryDto = {
   "liveClassId"?: string;
@@ -327,6 +354,19 @@ export type TeacherDashboardSummaryDto = {
   "totalStudents"?: number;
   "pendingSubmissions"?: number;
   "upcomingLiveSessions"?: number;
+};
+
+export type UpdateLiveSessionRequestDto = {
+  "title": string;
+  "description"?: string | null;
+  "startTime": string;
+  "durationMinutes"?: number;
+  "status"?: LiveSessionStatus;
+  "recordingEnabled"?: boolean;
+  "playbackEnabled"?: boolean;
+  "acsRoomId"?: string | null;
+  "acsCallLocator"?: string | null;
+  "chatThreadId"?: string | null;
 };
 
 export type UpdateMyProfileRequest = {
