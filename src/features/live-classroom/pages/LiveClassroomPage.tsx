@@ -9,7 +9,6 @@ import {
   MicOff,
   Radio,
   RefreshCcw,
-  Users,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -18,17 +17,14 @@ import {
   createLiveSessionJoinToken,
   endTeacherLiveSessionById,
   getLiveClassroomErrorMessage,
-  getTeacherLiveSessionAttendance,
   joinStudentLiveSessionAttendance,
   leaveStudentLiveSessionAttendance,
   startTeacherLiveSessionById,
   startTeacherLiveSessionRecording,
   stopTeacherLiveSessionRecording,
-  type LiveSessionAttendanceSummary,
   type LiveSessionRecording,
 } from '@/features/live-classroom/api';
 import { LiveChatPanel } from '@/features/live-classroom/components/LiveChatPanel';
-import { LiveSessionAttendanceModal } from '@/features/live-classroom/components/LiveSessionAttendanceModal';
 import { VideoTileSurface } from '@/features/live-classroom/components/VideoTileSurface';
 import { useLiveClassroomCall } from '@/features/live-classroom/hooks/useLiveClassroomCall';
 import { useLiveClassroomChat } from '@/features/live-classroom/hooks/useLiveClassroomChat';
@@ -131,12 +127,6 @@ export default function LiveClassroomPage({
   const [isPreparingPreview, setIsPreparingPreview] = useState(false);
   const [pageActionError, setPageActionError] = useState<string | null>(null);
 
-  const [attendanceOpen, setAttendanceOpen] = useState(false);
-  const [attendanceLoading, setAttendanceLoading] = useState(false);
-  const [attendanceError, setAttendanceError] = useState<string | null>(null);
-  const [attendanceSummary, setAttendanceSummary] =
-    useState<LiveSessionAttendanceSummary | null>(null);
-
   const [hasAttendanceJoined, setHasAttendanceJoined] = useState(false);
 
   const call = useLiveClassroomCall({ joinToken, autoPrepareLocalPreview: false });
@@ -221,26 +211,6 @@ export default function LiveClassroomPage({
       }
     };
   }, [hasAttendanceJoined, role, sessionId]);
-
-  const loadAttendance = useCallback(async () => {
-    if (role !== 'teacher') {
-      return;
-    }
-
-    setAttendanceLoading(true);
-    setAttendanceError(null);
-
-    try {
-      const summary = await getTeacherLiveSessionAttendance(sessionId);
-      setAttendanceSummary(summary);
-    } catch (loadError) {
-      setAttendanceError(
-        getLiveClassroomErrorMessage(loadError, 'Unable to load attendance for this session.'),
-      );
-    } finally {
-      setAttendanceLoading(false);
-    }
-  }, [role, sessionId]);
 
   const handlePreparePreview = useCallback(async () => {
     setIsPreparingPreview(true);
@@ -410,12 +380,8 @@ export default function LiveClassroomPage({
     }
   }, [call, hasAttendanceJoined, loadSession, sessionId]);
 
-  const handleOpenAttendance = useCallback(() => {
-    setAttendanceOpen(true);
-    void loadAttendance();
-  }, [loadAttendance]);
-
   const backHref = getBackHref(role, courseId);
+  const attendanceHref = `/teacher/dashboard/courses/${courseId}/live-sessions/${sessionId}/attendance`;
   const sessionStatus = session ? getLiveClassroomStatusMeta(session.status) : null;
   const recordingStatus = session ? getRecordingStatusMeta(session.recordingStatus) : null;
   const connectionLabel = getConnectionLabel({
@@ -521,13 +487,12 @@ export default function LiveClassroomPage({
               ? 'Stop recording'
               : 'Start recording'}
         </button>
-        <button
-          type="button"
-          onClick={handleOpenAttendance}
+        <Link
+          href={attendanceHref}
           className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
         >
           Attendance
-        </button>
+        </Link>
       </div>
     ) : (
       <div className="flex flex-wrap gap-3">
@@ -883,15 +848,6 @@ export default function LiveClassroomPage({
           </div>
         )}
       </div>
-
-      <LiveSessionAttendanceModal
-        open={attendanceOpen}
-        isLoading={attendanceLoading}
-        error={attendanceError}
-        summary={attendanceSummary}
-        onClose={() => setAttendanceOpen(false)}
-        onRefresh={() => void loadAttendance()}
-      />
     </>
   );
 }

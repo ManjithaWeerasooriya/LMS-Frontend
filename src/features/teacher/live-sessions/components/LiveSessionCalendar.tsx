@@ -47,9 +47,11 @@ const buildCalendarDays = (
 export function LiveSessionCalendar({
   sessions,
   getClassroomHref,
+  getAttendanceHref,
 }: {
   sessions: TeacherLiveSession[];
   getClassroomHref?: (session: TeacherLiveSession) => string;
+  getAttendanceHref?: (session: TeacherLiveSession) => string;
 }) {
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
@@ -228,6 +230,7 @@ export function LiveSessionCalendar({
             {activeDay.sessions.map((session) => {
               const status = getLiveSessionStatusMeta(session.status);
               const classroomHref = getClassroomHref?.(session);
+              const attendanceHref = getAttendanceHref?.(session);
 
               return (
                 <div
@@ -264,6 +267,14 @@ export function LiveSessionCalendar({
                           className="mt-3 inline-flex items-center justify-center rounded-2xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                         >
                           Open classroom
+                        </Link>
+                      ) : null}
+                      {attendanceHref ? (
+                        <Link
+                          href={attendanceHref}
+                          className="mt-3 ml-2 inline-flex items-center justify-center rounded-2xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                        >
+                          Attendance
                         </Link>
                       ) : null}
                     </div>

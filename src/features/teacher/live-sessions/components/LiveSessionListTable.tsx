@@ -19,6 +19,7 @@ type LiveSessionListTableProps = {
   emptyMessage?: string;
   cancellingSessionId?: string | null;
   getClassroomHref?: (session: TeacherLiveSession) => string;
+  getAttendanceHref?: (session: TeacherLiveSession) => string;
   onEdit: (session: TeacherLiveSession) => void;
   onCancel: (session: TeacherLiveSession) => void;
 };
@@ -47,6 +48,7 @@ export function LiveSessionListTable({
   emptyMessage = 'No live sessions scheduled for this course.',
   cancellingSessionId,
   getClassroomHref,
+  getAttendanceHref,
   onEdit,
   onCancel,
 }: LiveSessionListTableProps) {
@@ -84,6 +86,7 @@ export function LiveSessionListTable({
                 const canEdit = canEditLiveSession(session.status);
                 const canCancel = canCancelLiveSession(session.status);
                 const classroomHref = getClassroomHref?.(session);
+                const attendanceHref = getAttendanceHref?.(session);
 
                 return (
                   <tr key={session.id} className="align-top hover:bg-slate-50/70">
@@ -136,6 +139,14 @@ export function LiveSessionListTable({
                             className="inline-flex items-center gap-2 rounded-2xl bg-[#1B3B8B] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#17306f]"
                           >
                             Classroom
+                          </Link>
+                        ) : null}
+                        {attendanceHref ? (
+                          <Link
+                            href={attendanceHref}
+                            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                          >
+                            Attendance
                           </Link>
                         ) : null}
                         <button

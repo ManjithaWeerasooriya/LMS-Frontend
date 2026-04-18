@@ -196,6 +196,8 @@ export function TeacherCourseLiveSessionsSection({
 
   const getClassroomHref = (session: TeacherLiveSession) =>
     `/teacher/dashboard/courses/${courseId}/live-sessions/${session.id}`;
+  const getAttendanceHref = (session: TeacherLiveSession) =>
+    `/teacher/dashboard/courses/${courseId}/live-sessions/${session.id}/attendance`;
 
   return (
     <>
@@ -308,12 +310,14 @@ export function TeacherCourseLiveSessionsSection({
             <LiveSessionCalendar
               sessions={orderedSessions}
               getClassroomHref={getClassroomHref}
+              getAttendanceHref={getAttendanceHref}
             />
           ) : (
             <LiveSessionListTable
               sessions={orderedSessions}
               cancellingSessionId={cancellingSessionId}
               getClassroomHref={getClassroomHref}
+              getAttendanceHref={getAttendanceHref}
               onEdit={openEditModal}
               onCancel={handleCancel}
             />
