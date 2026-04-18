@@ -194,6 +194,9 @@ export function TeacherCourseLiveSessionsSection({
       }
     : undefined;
 
+  const getClassroomHref = (session: TeacherLiveSession) =>
+    `/teacher/dashboard/courses/${courseId}/live-sessions/${session.id}`;
+
   return (
     <>
       <QuizSectionCard
@@ -302,11 +305,15 @@ export function TeacherCourseLiveSessionsSection({
               }
             />
           ) : viewMode === 'calendar' ? (
-            <LiveSessionCalendar sessions={orderedSessions} />
+            <LiveSessionCalendar
+              sessions={orderedSessions}
+              getClassroomHref={getClassroomHref}
+            />
           ) : (
             <LiveSessionListTable
               sessions={orderedSessions}
               cancellingSessionId={cancellingSessionId}
+              getClassroomHref={getClassroomHref}
               onEdit={openEditModal}
               onCancel={handleCancel}
             />

@@ -1,22 +1,11 @@
 import { isAxiosError } from 'axios';
 
-import type {
-  CreateLiveSessionRequestDto,
-  LiveSessionStatus,
-  UpdateLiveSessionRequestDto,
-} from '@/generated/api-types';
+import type { LiveSessionStatus } from '@/generated/api-types';
 import { apiClient } from '@/lib/http';
 
-export const LIVE_SESSION_STATUS = {
-  scheduled: 1 as LiveSessionStatus,
-  live: 2 as LiveSessionStatus,
-  ended: 3 as LiveSessionStatus,
-  cancelled: 4 as LiveSessionStatus,
-};
+export type StudentLiveSessionRecordingStatus = 1 | 2 | 3 | 4;
 
-export type LiveSessionRecordingStatus = 1 | 2 | 3 | 4;
-
-export type TeacherLiveSession = {
+export type StudentLiveSession = {
   id: string;
   courseId: string;
   courseTitle: string;
@@ -31,23 +20,13 @@ export type TeacherLiveSession = {
   acsCallLocator?: string | null;
   chatThreadId?: string | null;
   acsRecordingId?: string | null;
-  recordingStatus: LiveSessionRecordingStatus;
+  recordingStatus: StudentLiveSessionRecordingStatus;
   recordingUrl?: string | null;
   recordingStartedAt?: string | null;
   recordingStoppedAt?: string | null;
   teacherName?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
-};
-
-export type TeacherLiveSessionInput = {
-  title: string;
-  description?: string;
-  startTimeLocal: string;
-  durationMinutes: number;
-  recordingEnabled: boolean;
-  playbackEnabled: boolean;
-  status?: LiveSessionStatus;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -148,7 +127,7 @@ const unwrapCollection = (value: unknown, keys: string[] = []): unknown[] => {
   return [];
 };
 
-const normalizeLiveSessionStatus = (value: unknown): LiveSessionStatus => {
+const normalizeStatus = (value: unknown): LiveSessionStatus => {
   if (typeof value === 'number' && value >= 1 && value <= 4) {
     return value as LiveSessionStatus;
   }
@@ -160,24 +139,24 @@ const normalizeLiveSessionStatus = (value: unknown): LiveSessionStatus => {
     }
 
     const normalized = value.trim().toLowerCase();
-    if (normalized === 'scheduled') return LIVE_SESSION_STATUS.scheduled;
-    if (normalized === 'live') return LIVE_SESSION_STATUS.live;
-    if (normalized === 'ended') return LIVE_SESSION_STATUS.ended;
-    if (normalized === 'cancelled') return LIVE_SESSION_STATUS.cancelled;
+    if (normalized === 'scheduled') return 1;
+    if (normalized === 'live') return 2;
+    if (normalized === 'ended') return 3;
+    if (normalized === 'cancelled') return 4;
   }
 
-  return LIVE_SESSION_STATUS.scheduled;
+  return 1;
 };
 
-const normalizeRecordingStatus = (value: unknown): LiveSessionRecordingStatus => {
+const normalizeRecordingStatus = (value: unknown): StudentLiveSessionRecordingStatus => {
   if (typeof value === 'number' && value >= 1 && value <= 4) {
-    return value as LiveSessionRecordingStatus;
+    return value as StudentLiveSessionRecordingStatus;
   }
 
   if (typeof value === 'string' && value.trim()) {
     const parsed = Number(value);
     if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 4) {
-      return parsed as LiveSessionRecordingStatus;
+      return parsed as StudentLiveSessionRecordingStatus;
     }
 
     const normalized = value.trim().toLowerCase();
@@ -190,7 +169,7 @@ const normalizeRecordingStatus = (value: unknown): LiveSessionRecordingStatus =>
   return 1;
 };
 
-const normalizeLiveSession = (value: unknown): TeacherLiveSession => {
+const normalizeStudentLiveSession = (value: unknown): StudentLiveSession => {
   const record = unwrapEntity(value, ['session', 'liveSession']);
   const courseRecord = readRecord(record, ['course']);
 
@@ -209,7 +188,7 @@ const normalizeLiveSession = (value: unknown): TeacherLiveSession => {
     startTime:
       readString(record, ['startTime', 'scheduledAt', 'startsAt', 'startTimeUtc']) ?? '',
     durationMinutes: readNumber(record, ['durationMinutes', 'duration']) ?? 60,
-    status: normalizeLiveSessionStatus(record.status),
+    status: normalizeStatus(record.status),
     recordingEnabled: readBoolean(record, ['recordingEnabled', 'enableRecording']) ?? false,
     playbackEnabled: readBoolean(record, ['playbackEnabled']) ?? false,
     acsRoomId: readString(record, ['acsRoomId']) ?? null,
@@ -226,19 +205,7 @@ const normalizeLiveSession = (value: unknown): TeacherLiveSession => {
   };
 };
 
-const toLiveSessionPayload = (
-  input: TeacherLiveSessionInput,
-): CreateLiveSessionRequestDto | UpdateLiveSessionRequestDto => ({
-  title: input.title.trim(),
-  description: input.description?.trim() || null,
-  startTime: new Date(input.startTimeLocal).toISOString(),
-  durationMinutes: input.durationMinutes,
-  status: input.status ?? LIVE_SESSION_STATUS.scheduled,
-  recordingEnabled: input.recordingEnabled,
-  playbackEnabled: input.playbackEnabled,
-});
-
-export const getLiveSessionErrorMessage = (
+export const getStudentLiveSessionErrorMessage = (
   error: unknown,
   fallback = 'Something went wrong while loading live sessions.',
 ): string => {
@@ -262,12 +229,13 @@ export const getLiveSessionErrorMessage = (
   return error.message || fallback;
 };
 
-export async function getTeacherLiveSessionsByCourse(
+export async function getStudentLiveSessionsByCourse(
   courseId: string,
-): Promise<TeacherLiveSession[]> {
-  const { data } = await apiClient.get<unknown>(`/api/v1/teacher/courses/${courseId}/live-sessions`);
+): Promise<StudentLiveSession[]> {
+  const { data } = await apiClient.get<unknown>(`/api/v1/student/courses/${courseId}/live-sessions`);
+
   return unwrapCollection(data, ['sessions', 'liveSessions'])
-    .map(normalizeLiveSession)
+    .map(normalizeStudentLiveSession)
     .sort((left, right) => {
       const leftTime = new Date(left.startTime).getTime();
       const rightTime = new Date(right.startTime).getTime();
@@ -275,44 +243,7 @@ export async function getTeacherLiveSessionsByCourse(
     });
 }
 
-export async function getTeacherLiveSessionById(
-  courseId: string,
-  sessionId: string,
-): Promise<TeacherLiveSession> {
-  const sessions = await getTeacherLiveSessionsByCourse(courseId);
-  const session = sessions.find((entry) => entry.id === sessionId);
-
-  if (!session) {
-    throw new Error('Live session not found in this course.');
-  }
-
-  return session;
-}
-
-export async function createTeacherLiveSession(
-  courseId: string,
-  input: TeacherLiveSessionInput,
-): Promise<TeacherLiveSession> {
-  const response = await apiClient.post<unknown>(
-    `/api/v1/teacher/courses/${courseId}/live-sessions`,
-    toLiveSessionPayload(input),
-  );
-
-  return normalizeLiveSession(response.data);
-}
-
-export async function updateTeacherLiveSession(
-  sessionId: string,
-  input: TeacherLiveSessionInput,
-): Promise<TeacherLiveSession> {
-  const response = await apiClient.put<unknown>(
-    `/api/v1/teacher/live-sessions/${sessionId}`,
-    toLiveSessionPayload(input),
-  );
-
-  return normalizeLiveSession(response.data);
-}
-
-export async function cancelTeacherLiveSession(sessionId: string): Promise<void> {
-  await apiClient.delete(`/api/v1/teacher/live-sessions/${sessionId}`);
+export async function getStudentLiveSessionById(sessionId: string): Promise<StudentLiveSession> {
+  const { data } = await apiClient.get<unknown>(`/api/v1/student/live-sessions/${sessionId}`);
+  return normalizeStudentLiveSession(data);
 }

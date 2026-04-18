@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { PencilLine, Trash2 } from 'lucide-react';
 
 import type { TeacherLiveSession } from '@/features/teacher/live-sessions/api';
@@ -17,6 +18,7 @@ type LiveSessionListTableProps = {
   isLoading?: boolean;
   emptyMessage?: string;
   cancellingSessionId?: string | null;
+  getClassroomHref?: (session: TeacherLiveSession) => string;
   onEdit: (session: TeacherLiveSession) => void;
   onCancel: (session: TeacherLiveSession) => void;
 };
@@ -44,6 +46,7 @@ export function LiveSessionListTable({
   isLoading = false,
   emptyMessage = 'No live sessions scheduled for this course.',
   cancellingSessionId,
+  getClassroomHref,
   onEdit,
   onCancel,
 }: LiveSessionListTableProps) {
@@ -80,6 +83,7 @@ export function LiveSessionListTable({
                 const status = getLiveSessionStatusMeta(session.status);
                 const canEdit = canEditLiveSession(session.status);
                 const canCancel = canCancelLiveSession(session.status);
+                const classroomHref = getClassroomHref?.(session);
 
                 return (
                   <tr key={session.id} className="align-top hover:bg-slate-50/70">
@@ -126,6 +130,14 @@ export function LiveSessionListTable({
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-2">
+                        {classroomHref ? (
+                          <Link
+                            href={classroomHref}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-[#1B3B8B] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#17306f]"
+                          >
+                            Classroom
+                          </Link>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => onEdit(session)}

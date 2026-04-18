@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -43,7 +44,13 @@ const buildCalendarDays = (
   });
 };
 
-export function LiveSessionCalendar({ sessions }: { sessions: TeacherLiveSession[] }) {
+export function LiveSessionCalendar({
+  sessions,
+  getClassroomHref,
+}: {
+  sessions: TeacherLiveSession[];
+  getClassroomHref?: (session: TeacherLiveSession) => string;
+}) {
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const initializedFromSessionsRef = useRef(false);
@@ -220,6 +227,7 @@ export function LiveSessionCalendar({ sessions }: { sessions: TeacherLiveSession
           <div className="mt-4 space-y-3">
             {activeDay.sessions.map((session) => {
               const status = getLiveSessionStatusMeta(session.status);
+              const classroomHref = getClassroomHref?.(session);
 
               return (
                 <div
@@ -250,6 +258,14 @@ export function LiveSessionCalendar({ sessions }: { sessions: TeacherLiveSession
                         )}{' '}
                         · {formatDurationMinutes(session.durationMinutes)}
                       </p>
+                      {classroomHref ? (
+                        <Link
+                          href={classroomHref}
+                          className="mt-3 inline-flex items-center justify-center rounded-2xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                        >
+                          Open classroom
+                        </Link>
+                      ) : null}
                     </div>
                   </div>
                 </div>
