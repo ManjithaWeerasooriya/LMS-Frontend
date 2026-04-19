@@ -144,24 +144,28 @@ export type ForgotPasswordRequest = {
   "email": string;
 };
 
-export type LiveClassListItemDto = {
+export type LiveSessionListItemDto = {
   "id"?: string;
-  "topic"?: string | null;
+  "courseId"?: string | null;
+  "title"?: string | null;
   "courseTitle"?: string | null;
-  "scheduledAt"?: string;
+  "startTime"?: string;
+  "durationMinutes"?: number | null;
   "studentsEnrolled"?: number;
-  "meetingLink"?: string | null;
+  "status"?: LiveSessionStatus;
 };
 
 export type LiveSessionStatus = 1 | 2 | 3 | 4;
 
 export type LiveSessionSummaryDto = {
-  "liveClassId"?: string;
-  "topic"?: string | null;
-  "scheduledAt"?: string;
+  "sessionId"?: string;
+  "courseId"?: string | null;
+  "title"?: string | null;
+  "startTime"?: string;
   "courseTitle"?: string | null;
+  "durationMinutes"?: number | null;
   "studentsEnrolled"?: number;
-  "meetingLink"?: string | null;
+  "status"?: LiveSessionStatus;
 };
 
 export type LoginRequest = {
@@ -236,15 +240,6 @@ export type ResetPasswordRequest = {
   "confirmPassword": string;
 };
 
-export type ScheduleLiveClassRequestDto = {
-  "topic": string;
-  "courseId"?: string | null;
-  "scheduledAt": string;
-  "meetingLink"?: string | null;
-  "enableRecording"?: boolean;
-  "durationMinutes"?: number | null;
-};
-
 export type StudentCourseListItemDto = {
   "id"?: string;
   "title"?: string | null;
@@ -263,12 +258,14 @@ export type StudentDashboardCourseItemDto = {
   "progressPercent"?: number;
 };
 
-export type StudentDashboardLiveClassItemDto = {
-  "liveClassId"?: string;
-  "topic"?: string | null;
+export type StudentDashboardLiveSessionItemDto = {
+  "sessionId"?: string;
+  "courseId"?: string | null;
+  "title"?: string | null;
   "courseTitle"?: string | null;
-  "scheduledAt"?: string;
+  "startTime"?: string;
   "durationMinutes"?: number | null;
+  "status"?: LiveSessionStatus;
 };
 
 export type StudentDashboardQuizItemDto = {
@@ -281,13 +278,13 @@ export type StudentDashboardQuizItemDto = {
 export type StudentDashboardResponseDto = {
   "summary"?: StudentDashboardSummaryDto;
   "myCourses"?: Array<StudentDashboardCourseItemDto> | null;
-  "upcomingClasses"?: Array<StudentDashboardLiveClassItemDto> | null;
+  "upcomingLiveSessions"?: Array<StudentDashboardLiveSessionItemDto> | null;
   "pendingQuizzes"?: Array<StudentDashboardQuizItemDto> | null;
 };
 
 export type StudentDashboardSummaryDto = {
   "enrolledCourses"?: number;
-  "upcomingClasses"?: number;
+  "upcomingLiveSessions"?: number;
   "pendingQuizzes"?: number;
 };
 
@@ -316,12 +313,14 @@ export type TeacherDashboardCourseItemDto = {
 };
 
 export type TeacherDashboardLiveSessionItemDto = {
-  "liveClassId"?: string;
-  "topic"?: string | null;
-  "scheduledAt"?: string;
+  "sessionId"?: string;
+  "courseId"?: string | null;
+  "title"?: string | null;
+  "startTime"?: string;
   "courseTitle"?: string | null;
+  "durationMinutes"?: number | null;
   "studentsEnrolled"?: number;
-  "meetingLink"?: string | null;
+  "status"?: LiveSessionStatus;
 };
 
 export type TeacherDashboardPerformanceDto = {

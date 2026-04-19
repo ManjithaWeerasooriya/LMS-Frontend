@@ -51,7 +51,6 @@ export const apiPaths = {
   "/api/v1/teacher/courses/{courseId}/live-sessions": "/api/v1/teacher/courses/{courseId}/live-sessions",
   "/api/v1/teacher/courses/{id}": "/api/v1/teacher/courses/{id}",
   "/api/v1/teacher/dashboard": "/api/v1/teacher/dashboard",
-  "/api/v1/teacher/live-classes": "/api/v1/teacher/live-classes",
   "/api/v1/teacher/live-sessions/{sessionId}": "/api/v1/teacher/live-sessions/{sessionId}",
   "/api/v1/teacher/live-sessions/{sessionId}/attendance": "/api/v1/teacher/live-sessions/{sessionId}/attendance",
   "/api/v1/teacher/live-sessions/{sessionId}/end": "/api/v1/teacher/live-sessions/{sessionId}/end",

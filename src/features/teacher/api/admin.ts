@@ -144,9 +144,14 @@ export type StudentAttendanceTrendDto = {
 
 export type LiveSessionSummaryDto = {
   sessionId: string;
-  topic: string;
-  scheduledAt: string;
+  title: string;
+  startTime: string;
   attendees: number;
+  liveSessionId?: string;
+  liveClassId?: string;
+  topic?: string;
+  scheduledAt?: string;
+  studentsEnrolled?: number;
 };
 
 export type ReportsOverviewResponse = {
@@ -705,12 +710,19 @@ export async function getAdminReportsOverview(): Promise<ReportsOverviewResponse
       attendance: {
         courses: [],
         studentTrends: [],
-        upcomingSessions: (data.attendance?.upcomingSessionDetails ?? []).map((session) => ({
-          sessionId: session.liveClassId ?? '',
-          topic: session.topic ?? 'Live Session',
-          scheduledAt: session.scheduledAt ?? '',
-          attendees: session.studentsEnrolled ?? 0,
-        })),
+        upcomingSessions: (data.attendance?.upcomingSessionDetails ?? []).map((session) => {
+          const record = (toRecord(session) ?? {}) as Record<string, unknown>;
+
+          return {
+            sessionId: coerceString(
+              record.sessionId ?? record.liveSessionId ?? record.liveClassId,
+              '',
+            ),
+            title: coerceString(record.title ?? record.topic, 'Live Session'),
+            startTime: coerceString(record.startTime ?? record.scheduledAt, ''),
+            attendees: coerceNumber(record.studentsEnrolled ?? record.attendees, 0),
+          };
+        }),
       },
     };
   } catch (error) {
