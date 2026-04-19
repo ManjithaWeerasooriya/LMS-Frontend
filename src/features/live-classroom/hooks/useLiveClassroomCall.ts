@@ -62,6 +62,11 @@ type NormalizedJoinLocator =
     backendField: 'roomId';
   };
 
+const getCameraActiveState = (
+  call: Call | null,
+  localVideoStream: LocalVideoStream | null,
+) => Boolean(call?.isLocalVideoStarted || localVideoStream);
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -235,9 +240,12 @@ export function useLiveClassroomCall({
       setRemoteTiles([]);
       setIsMuted(false);
       setIsCameraOn(
-        !shouldDisposePreview &&
-          !shouldDisposeLocalStream &&
-          Boolean(localVideoStreamRef.current || localVideoStream),
+        getCameraActiveState(
+          null,
+          !shouldDisposePreview && !shouldDisposeLocalStream
+            ? (localVideoStreamRef.current ?? localVideoStream)
+            : null,
+        ),
       );
 
       if (options?.clearError) {
@@ -400,6 +408,38 @@ export function useLiveClassroomCall({
     [isRuntimeCurrent],
   );
 
+  const stopLocalPreview = useCallback(
+    (options?: { disposeLocalStream?: boolean }) => {
+      const disposeLocalStream = options?.disposeLocalStream ?? true;
+      const previewView = localPreviewViewRef.current;
+      const previewRenderer = localPreviewRendererRef.current;
+      const localVideoStream = localVideoStreamRef.current;
+
+      localPreviewViewRef.current = null;
+      localPreviewRendererRef.current = null;
+
+      if (disposeLocalStream) {
+        localVideoStreamRef.current = null;
+      }
+
+      previewView?.dispose();
+      previewRenderer?.dispose();
+
+      if (disposeLocalStream) {
+        localVideoStream?.dispose();
+      }
+
+      setLocalPreview(null);
+      setIsCameraOn(
+        getCameraActiveState(
+          callRef.current,
+          disposeLocalStream ? null : (localVideoStreamRef.current ?? localVideoStream),
+        ),
+      );
+    },
+    [],
+  );
+
   const ensureLocalPreview = useCallback(async () => {
     const { deviceManager } = await ensureAgent();
     const runtimeVersion = runtimeVersionRef.current;
@@ -427,6 +467,9 @@ export function useLiveClassroomCall({
     }
 
     await renderLocalPreview(runtimeVersion);
+    if (isRuntimeCurrent(runtimeVersion)) {
+      setIsCameraOn(getCameraActiveState(callRef.current, localVideoStreamRef.current));
+    }
   }, [ensureAgent, ensureSdkLoaded, isRuntimeCurrent, renderLocalPreview]);
 
   const syncParticipantTile = useCallback(
@@ -594,7 +637,7 @@ export function useLiveClassroomCall({
       callRef.current = call;
       setCallState(call.state);
       setIsMuted(call.isMuted);
-      setIsCameraOn(call.isLocalVideoStarted || Boolean(localVideoStreamRef.current));
+      setIsCameraOn(getCameraActiveState(call, localVideoStreamRef.current));
       setHasBeenConnected((current) => current || call.state === 'Connected');
 
       for (const participant of call.remoteParticipants) {
@@ -606,7 +649,7 @@ export function useLiveClassroomCall({
 
         setCallState(call.state);
         setIsMuted(call.isMuted);
-        setIsCameraOn(call.isLocalVideoStarted || Boolean(localVideoStreamRef.current));
+        setIsCameraOn(getCameraActiveState(call, localVideoStreamRef.current));
 
         if (call.state === 'Connected') {
           setHasBeenConnected(true);
@@ -630,7 +673,12 @@ export function useLiveClassroomCall({
 
       const handleLocalVideoChanged = () => {
         if (disposedRef.current) return;
-        setIsCameraOn(call.isLocalVideoStarted || Boolean(localVideoStreamRef.current));
+        setIsCameraOn(getCameraActiveState(call, localVideoStreamRef.current));
+      };
+
+      const handleLocalVideoStreamsUpdated = () => {
+        if (disposedRef.current) return;
+        setIsCameraOn(getCameraActiveState(call, localVideoStreamRef.current));
       };
 
       const handleRemoteParticipantsUpdated = (event: {
@@ -655,12 +703,14 @@ export function useLiveClassroomCall({
       call.on('stateChanged', handleStateChanged);
       call.on('isMutedChanged', handleMutedChanged);
       call.on('isLocalVideoStartedChanged', handleLocalVideoChanged);
+      call.on('localVideoStreamsUpdated', handleLocalVideoStreamsUpdated);
       call.on('remoteParticipantsUpdated', handleRemoteParticipantsUpdated);
 
       callCleanupRef.current = () => {
         call.off('stateChanged', handleStateChanged);
         call.off('isMutedChanged', handleMutedChanged);
         call.off('isLocalVideoStartedChanged', handleLocalVideoChanged);
+        call.off('localVideoStreamsUpdated', handleLocalVideoStreamsUpdated);
         call.off('remoteParticipantsUpdated', handleRemoteParticipantsUpdated);
       };
     },
@@ -758,12 +808,14 @@ export function useLiveClassroomCall({
     setError(null);
 
     try {
-      if (call.isMuted) {
-        await call.unmute();
-      } else {
+      const nextMutedState = !call.isMuted;
+
+      if (nextMutedState) {
         await call.mute();
+      } else {
+        await call.unmute();
       }
-      setIsMuted(call.isMuted);
+      setIsMuted(nextMutedState);
     } catch (muteError) {
       setError(
         getLiveClassroomErrorMessage(muteError, 'Unable to update microphone state.'),
@@ -776,6 +828,18 @@ export function useLiveClassroomCall({
     setError(null);
 
     try {
+      const localVideoStream = localVideoStreamRef.current;
+      const isCameraActive = getCameraActiveState(call, localVideoStream);
+
+      if (isCameraActive && localVideoStream) {
+        if (call?.isLocalVideoStarted) {
+          await call.stopVideo(localVideoStream);
+        }
+
+        stopLocalPreview({ disposeLocalStream: true });
+        return;
+      }
+
       if (!localVideoStreamRef.current) {
         await ensureLocalPreview();
       }
@@ -784,23 +848,17 @@ export function useLiveClassroomCall({
         return;
       }
 
-      if (!call) {
-        await renderLocalPreview();
-        setIsCameraOn(true);
-        return;
+      if (call && !call.isLocalVideoStarted) {
+        await call.startVideo(localVideoStreamRef.current);
       }
 
-      if (call.isLocalVideoStarted) {
-        await call.stopVideo(localVideoStreamRef.current);
-        setIsCameraOn(false);
-      } else {
-        await call.startVideo(localVideoStreamRef.current);
-        setIsCameraOn(true);
-      }
+      setIsCameraOn(
+        getCameraActiveState(callRef.current, localVideoStreamRef.current),
+      );
     } catch (cameraError) {
       setError(getLiveClassroomErrorMessage(cameraError, 'Unable to update camera state.'));
     }
-  }, [ensureLocalPreview, renderLocalPreview]);
+  }, [ensureLocalPreview, stopLocalPreview]);
 
   useEffect(() => {
     disposedRef.current = false;

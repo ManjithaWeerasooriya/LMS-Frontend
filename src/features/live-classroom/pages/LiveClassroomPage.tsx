@@ -709,7 +709,7 @@ export default function LiveClassroomPage({
                           <button
                             type="button"
                             onClick={() => void call.toggleMicrophone()}
-                            disabled={!call.isConnected}
+                            disabled={call.callState === 'idle' || call.isJoining}
                             className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {call.isMuted ? (
@@ -717,13 +717,13 @@ export default function LiveClassroomPage({
                             ) : (
                               <Mic className="h-4 w-4" />
                             )}
-                            {call.isMuted ? 'Unmute' : 'Mute'}
+                            {call.isMuted ? 'Turn mic on' : 'Turn mic off'}
                           </button>
 
                           <button
                             type="button"
                             onClick={() => void call.toggleCamera()}
-                            disabled={!call.localPreview && !call.isConnected && isTokenLoading}
+                            disabled={isTokenLoading || !call.supportsJoining || call.isJoining}
                             className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {call.isCameraOn ? (
@@ -731,7 +731,7 @@ export default function LiveClassroomPage({
                             ) : (
                               <CameraOff className="h-4 w-4" />
                             )}
-                            {call.isCameraOn ? 'Camera on' : 'Camera off'}
+                            {call.isCameraOn ? 'Turn camera off' : 'Turn camera on'}
                           </button>
                         </div>
                       ) : null}
