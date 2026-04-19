@@ -159,6 +159,33 @@ export function useLiveClassroomChat({
     commonSdkRef.current = commonSdk;
   }, []);
 
+  const loadHistory = useCallback(
+    async (
+      threadClient: ChatThreadClient,
+      ownUserId: string,
+    ): Promise<LiveClassroomChatMessage[]> => {
+      const history: LiveClassroomChatMessage[] = [];
+      let count = 0;
+
+      for await (const message of threadClient.listMessages()) {
+        const normalized = normalizeHistoryMessage(message, ownUserId);
+        if (normalized) {
+          history.push(normalized);
+        }
+        count += 1;
+        if (count >= 100) {
+          break;
+        }
+      }
+
+      return history.sort(
+        (left, right) =>
+          new Date(left.createdOn).getTime() - new Date(right.createdOn).getTime(),
+      );
+    },
+    [],
+  );
+
   useEffect(() => {
     disposedRef.current = false;
 
@@ -201,24 +228,7 @@ export function useLiveClassroomChat({
 
         clientRef.current = client;
         threadClientRef.current = threadClient;
-
-        const history: LiveClassroomChatMessage[] = [];
-        let count = 0;
-        for await (const message of threadClient.listMessages()) {
-          const normalized = normalizeHistoryMessage(message, joinToken.acsUserId);
-          if (normalized) {
-            history.push(normalized);
-          }
-          count += 1;
-          if (count >= 100) {
-            break;
-          }
-        }
-
-        history.sort(
-          (left, right) =>
-            new Date(left.createdOn).getTime() - new Date(right.createdOn).getTime(),
-        );
+        const history = await loadHistory(threadClient, joinToken.acsUserId);
 
         if (isMounted && !disposedRef.current) {
           setMessages(history);
@@ -251,12 +261,13 @@ export function useLiveClassroomChat({
 
         client.on('realTimeNotificationConnected', handleConnected);
         client.on('realTimeNotificationDisconnected', handleDisconnected);
-        client.on('chatMessageReceived', handleMessageReceived);
 
         try {
           await client.startRealtimeNotifications();
+          client.on('chatMessageReceived', handleMessageReceived);
           if (isMounted && !disposedRef.current) {
             setConnectionState('connected');
+            setError(null);
           }
         } catch (notificationError) {
           if (isMounted && !disposedRef.current) {
@@ -318,7 +329,7 @@ export function useLiveClassroomChat({
         void client.stopRealtimeNotifications().catch(() => undefined);
       }
     };
-  }, [ensureSdkLoaded, joinToken]);
+  }, [ensureSdkLoaded, joinToken, loadHistory]);
 
   const sendMessage = useCallback(
     async (message: string) => {
