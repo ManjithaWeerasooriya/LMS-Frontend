@@ -80,7 +80,7 @@ export default function StudentCourseDetailPage({
         content,
       });
     } catch (loadError) {
-      if (loadError instanceof StudentApiError && (loadError.status === 401 || loadError.status === 403)) {
+      if (loadError instanceof StudentApiError && loadError.status === 401) {
         await logoutUser();
         router.replace('/login');
         return;
@@ -91,7 +91,9 @@ export default function StudentCourseDetailPage({
         loading: false,
         error:
           loadError instanceof StudentApiError
-            ? loadError.message
+            ? loadError.status === 403
+              ? 'You are not authorized to access this course content.'
+              : loadError.message
             : 'Unable to load this course right now.',
       }));
     }
