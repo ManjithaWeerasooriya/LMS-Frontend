@@ -2,9 +2,10 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 
 import { ErrorAlert } from '@/components/ErrorAlert';
+import { LIVE_SESSION_MEETING_TYPE } from '@/features/teacher/live-sessions/api';
 import {
   defaultLiveSessionEditorValues,
   liveSessionEditorSchema,
@@ -34,11 +35,14 @@ export function LiveSessionFormModal({
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm<LiveSessionEditorValues>({
     resolver: zodResolver(liveSessionEditorSchema),
     defaultValues: initialValues ?? defaultLiveSessionEditorValues,
   });
+
+  const meetingType = useWatch({ control, name: 'meetingType' });
 
   useEffect(() => {
     if (!open) return;
@@ -164,6 +168,28 @@ export function LiveSessionFormModal({
                 <p className="text-xs text-rose-600">{errors.durationMinutes.message}</p>
               ) : null}
             </div>
+
+            <div className="space-y-2">
+              <label
+                className="text-xs font-semibold text-slate-700"
+                htmlFor="live-session-meeting-type"
+              >
+                Meeting type
+              </label>
+              <select
+                id="live-session-meeting-type"
+                {...register('meetingType', { valueAsNumber: true })}
+                disabled={isSubmitting}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                <option value={LIVE_SESSION_MEETING_TYPE.room}>Room</option>
+                <option value={LIVE_SESSION_MEETING_TYPE.group}>Group</option>
+                <option value={LIVE_SESSION_MEETING_TYPE.teams}>Teams</option>
+              </select>
+              {errors.meetingType ? (
+                <p className="text-xs text-rose-600">{errors.meetingType.message}</p>
+              ) : null}
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -201,6 +227,110 @@ export function LiveSessionFormModal({
               </span>
             </label>
           </div>
+
+          {meetingType === LIVE_SESSION_MEETING_TYPE.room ? (
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-700" htmlFor="live-session-room-id">
+                Room ID
+              </label>
+              <input
+                id="live-session-room-id"
+                type="text"
+                {...register('roomId')}
+                disabled={isSubmitting}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-70"
+                placeholder="ACS room ID"
+              />
+              {errors.roomId ? <p className="text-xs text-rose-600">{errors.roomId.message}</p> : null}
+            </div>
+          ) : null}
+
+          {meetingType === LIVE_SESSION_MEETING_TYPE.group ? (
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-700" htmlFor="live-session-group-id">
+                Group ID
+              </label>
+              <input
+                id="live-session-group-id"
+                type="text"
+                {...register('groupId')}
+                disabled={isSubmitting}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-70"
+                placeholder="ACS group ID"
+              />
+              {errors.groupId ? <p className="text-xs text-rose-600">{errors.groupId.message}</p> : null}
+            </div>
+          ) : null}
+
+          {meetingType === LIVE_SESSION_MEETING_TYPE.teams ? (
+            <div className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <div className="space-y-2">
+                <label
+                  className="text-xs font-semibold text-slate-700"
+                  htmlFor="live-session-meeting-link"
+                >
+                  Teams meeting link
+                </label>
+                <input
+                  id="live-session-meeting-link"
+                  type="text"
+                  {...register('meetingLink')}
+                  disabled={isSubmitting}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-70"
+                  placeholder="https://teams.microsoft.com/l/meetup-join/..."
+                />
+                {errors.meetingLink ? (
+                  <p className="text-xs text-rose-600">{errors.meetingLink.message}</p>
+                ) : null}
+              </div>
+
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                Or use meeting ID and passcode
+              </p>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label
+                    className="text-xs font-semibold text-slate-700"
+                    htmlFor="live-session-meeting-id"
+                  >
+                    Meeting ID
+                  </label>
+                  <input
+                    id="live-session-meeting-id"
+                    type="text"
+                    {...register('meetingId')}
+                    disabled={isSubmitting}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-70"
+                    placeholder="Teams meeting ID"
+                  />
+                  {errors.meetingId ? (
+                    <p className="text-xs text-rose-600">{errors.meetingId.message}</p>
+                  ) : null}
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    className="text-xs font-semibold text-slate-700"
+                    htmlFor="live-session-passcode"
+                  >
+                    Passcode
+                  </label>
+                  <input
+                    id="live-session-passcode"
+                    type="text"
+                    {...register('passcode')}
+                    disabled={isSubmitting}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-70"
+                    placeholder="Teams passcode"
+                  />
+                  {errors.passcode ? (
+                    <p className="text-xs text-rose-600">{errors.passcode.message}</p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <div className="flex justify-end gap-3">
             <button

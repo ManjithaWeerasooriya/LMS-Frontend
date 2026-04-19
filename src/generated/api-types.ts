@@ -99,8 +99,12 @@ export type CreateLiveSessionRequestDto = {
   "durationMinutes"?: number;
   "recordingEnabled"?: boolean;
   "playbackEnabled"?: boolean;
-  "acsRoomId"?: string | null;
-  "acsCallLocator"?: string | null;
+  "meetingType"?: MeetingType;
+  "roomId"?: string | null;
+  "groupId"?: string | null;
+  "meetingLink"?: string | null;
+  "meetingId"?: string | null;
+  "passcode"?: string | null;
   "chatThreadId"?: string | null;
 };
 
@@ -144,6 +148,8 @@ export type ForgotPasswordRequest = {
 };
 
 export type LiveSessionStatus = 1 | 2 | 3 | 4;
+
+export type MeetingType = 1 | 2 | 3;
 
 export type LiveSessionSummaryDto = {
   "liveSessionId"?: string;
@@ -345,8 +351,12 @@ export type UpdateLiveSessionRequestDto = {
   "durationMinutes"?: number;
   "recordingEnabled"?: boolean;
   "playbackEnabled"?: boolean;
-  "acsRoomId"?: string | null;
-  "acsCallLocator"?: string | null;
+  "meetingType"?: MeetingType;
+  "roomId"?: string | null;
+  "groupId"?: string | null;
+  "meetingLink"?: string | null;
+  "meetingId"?: string | null;
+  "passcode"?: string | null;
   "chatThreadId"?: string | null;
 };
 

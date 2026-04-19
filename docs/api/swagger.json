@@ -2835,13 +2835,31 @@
           "playbackEnabled": {
             "type": "boolean"
           },
-          "acsRoomId": {
+          "meetingType": {
+            "$ref": "#/components/schemas/MeetingType"
+          },
+          "roomId": {
             "maxLength": 200,
             "type": "string",
             "nullable": true
           },
-          "acsCallLocator": {
-            "maxLength": 500,
+          "groupId": {
+            "maxLength": 100,
+            "type": "string",
+            "nullable": true
+          },
+          "meetingLink": {
+            "maxLength": 1000,
+            "type": "string",
+            "nullable": true
+          },
+          "meetingId": {
+            "maxLength": 200,
+            "type": "string",
+            "nullable": true
+          },
+          "passcode": {
+            "maxLength": 200,
             "type": "string",
             "nullable": true
           },
@@ -3093,6 +3111,15 @@
           }
         },
         "additionalProperties": false
+      },
+      "MeetingType": {
+        "enum": [
+          1,
+          2,
+          3
+        ],
+        "type": "integer",
+        "format": "int32"
       },
       "PerformanceBandDto": {
         "type": "object",
@@ -3706,13 +3733,31 @@
           "playbackEnabled": {
             "type": "boolean"
           },
-          "acsRoomId": {
+          "meetingType": {
+            "$ref": "#/components/schemas/MeetingType"
+          },
+          "roomId": {
             "maxLength": 200,
             "type": "string",
             "nullable": true
           },
-          "acsCallLocator": {
-            "maxLength": 500,
+          "groupId": {
+            "maxLength": 100,
+            "type": "string",
+            "nullable": true
+          },
+          "meetingLink": {
+            "maxLength": 1000,
+            "type": "string",
+            "nullable": true
+          },
+          "meetingId": {
+            "maxLength": 200,
+            "type": "string",
+            "nullable": true
+          },
+          "passcode": {
+            "maxLength": 200,
             "type": "string",
             "nullable": true
           },

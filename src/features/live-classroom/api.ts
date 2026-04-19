@@ -5,14 +5,19 @@ import { apiClient } from '@/lib/http';
 
 export type ClassroomRecordingStatus = 1 | 2 | 3 | 4;
 export type ClassroomAttendanceStatus = 1 | 2 | 3 | 4 | 5;
+export type LiveClassroomMeetingType = 'room' | 'group' | 'teams';
 
 export type LiveClassroomJoinToken = {
   acsUserId: string;
   token: string;
   displayName: string;
   acsEndpoint?: string | null;
-  acsRoomId?: string | null;
-  acsCallLocator?: string | null;
+  meetingType?: LiveClassroomMeetingType | null;
+  roomId?: string | null;
+  groupId?: string | null;
+  meetingLink?: string | null;
+  meetingId?: string | null;
+  passcode?: string | null;
   chatThreadId?: string | null;
   session: {
     id: string;
@@ -109,20 +114,6 @@ const readBoolean = (record: Record<string, unknown>, keys: string[]): boolean |
     if (typeof value === 'string') {
       if (value.toLowerCase() === 'true') return true;
       if (value.toLowerCase() === 'false') return false;
-    }
-  }
-
-  return null;
-};
-
-const readRecord = (
-  record: Record<string, unknown>,
-  keys: string[],
-): Record<string, unknown> | null => {
-  for (const key of keys) {
-    const value = record[key];
-    if (isRecord(value)) {
-      return value;
     }
   }
 
@@ -227,6 +218,23 @@ const normalizeAttendanceStatus = (value: unknown): ClassroomAttendanceStatus =>
   return 1;
 };
 
+const normalizeMeetingType = (value: unknown): LiveClassroomMeetingType | null => {
+  if (typeof value === 'number') {
+    if (value === 1) return 'room';
+    if (value === 2) return 'group';
+    if (value === 3) return 'teams';
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === '1' || normalized === 'room') return 'room';
+    if (normalized === '2' || normalized === 'group') return 'group';
+    if (normalized === '3' || normalized === 'teams') return 'teams';
+  }
+
+  return null;
+};
+
 const normalizeJoinToken = (value: unknown): LiveClassroomJoinToken => {
   const record = unwrapEntity(value, ['token', 'joinToken']);
   const sessionRecord = unwrapEntity(record.session ?? record.liveSession ?? {}, ['session']);
@@ -236,8 +244,12 @@ const normalizeJoinToken = (value: unknown): LiveClassroomJoinToken => {
     token: readString(record, ['token']) ?? '',
     displayName: readString(record, ['displayName']) ?? 'Participant',
     acsEndpoint: readString(record, ['acsEndpoint']) ?? null,
-    acsRoomId: readString(record, ['acsRoomId']) ?? null,
-    acsCallLocator: readString(record, ['acsCallLocator']) ?? null,
+    meetingType: normalizeMeetingType(record.meetingType),
+    roomId: readString(record, ['roomId']) ?? null,
+    groupId: readString(record, ['groupId']) ?? null,
+    meetingLink: readString(record, ['meetingLink']) ?? null,
+    meetingId: readString(record, ['meetingId']) ?? null,
+    passcode: readString(record, ['passcode']) ?? null,
     chatThreadId: readString(record, ['chatThreadId']) ?? null,
     session: {
       id: readString(sessionRecord, ['id', 'sessionId']) ?? '',

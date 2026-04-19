@@ -55,8 +55,27 @@ type UseLiveClassroomCallResult = {
   toggleCamera: () => Promise<void>;
 };
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+type NormalizedJoinLocator =
+  | {
+      type: 'room';
+      locator: { roomId: string };
+      backendField: 'roomId';
+    }
+  | {
+      type: 'group';
+      locator: { groupId: string };
+      backendField: 'groupId';
+    }
+  | {
+      type: 'teamsMeetingLink';
+      locator: { meetingLink: string };
+      backendField: 'meetingLink';
+    }
+  | {
+      type: 'teamsMeetingId';
+      locator: { meetingId: string; passcode?: string };
+      backendField: 'meetingId';
+    };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -78,57 +97,60 @@ const readIdentifierRawId = (identifier: unknown): string => {
   return '';
 };
 
-const buildLocator = (
-  joinToken: LiveClassroomJoinToken,
-): { locator: { roomId: string } | { groupId: string }; type: 'room' | 'group' } | null => {
-  if (joinToken.acsRoomId) {
-    return {
-      locator: { roomId: joinToken.acsRoomId },
-      type: 'room',
-    };
-  }
+const normalizeLocatorValue = (value: string | null | undefined) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+};
 
-  const rawLocator = joinToken.acsCallLocator?.trim();
-  if (!rawLocator) {
+export const buildLocator = (joinToken: LiveClassroomJoinToken): NormalizedJoinLocator | null => {
+  const roomId = normalizeLocatorValue(joinToken.roomId);
+  const groupId = normalizeLocatorValue(joinToken.groupId);
+  const meetingLink = normalizeLocatorValue(joinToken.meetingLink);
+  const meetingId = normalizeLocatorValue(joinToken.meetingId);
+  const passcode = normalizeLocatorValue(joinToken.passcode);
+
+  const populatedLocatorFields = [roomId, groupId, meetingLink, meetingId].filter(Boolean);
+  if (!joinToken.meetingType || populatedLocatorFields.length !== 1) {
     return null;
   }
 
-  if (rawLocator.toLowerCase().startsWith('group:')) {
+  if (joinToken.meetingType === 'room') {
+    return roomId
+      ? {
+          type: 'room',
+          locator: { roomId },
+          backendField: 'roomId',
+        }
+      : null;
+  }
+
+  if (joinToken.meetingType === 'group') {
+    return groupId
+      ? {
+          type: 'group',
+          locator: { groupId },
+          backendField: 'groupId',
+        }
+      : null;
+  }
+
+  if (meetingLink) {
     return {
-      locator: { groupId: rawLocator.slice('group:'.length).trim() },
-      type: 'group',
+      type: 'teamsMeetingLink',
+      locator: { meetingLink },
+      backendField: 'meetingLink',
     };
   }
 
-  if (rawLocator.toLowerCase().startsWith('groupid:')) {
-    return {
-      locator: { groupId: rawLocator.slice('groupid:'.length).trim() },
-      type: 'group',
-    };
+  if (!meetingId) {
+    return null;
   }
 
-  if (rawLocator.toLowerCase().startsWith('room:')) {
-    return {
-      locator: { roomId: rawLocator.slice('room:'.length).trim() },
-      type: 'room',
-    };
-  }
-
-  if (rawLocator.toLowerCase().startsWith('roomid:')) {
-    return {
-      locator: { roomId: rawLocator.slice('roomid:'.length).trim() },
-      type: 'room',
-    };
-  }
-
-  if (UUID_PATTERN.test(rawLocator)) {
-    return {
-      locator: { groupId: rawLocator },
-      type: 'group',
-    };
-  }
-
-  return null;
+  return {
+    type: 'teamsMeetingId',
+    locator: passcode ? { meetingId, passcode } : { meetingId },
+    backendField: 'meetingId',
+  };
 };
 
 export function useLiveClassroomCall({
@@ -150,8 +172,9 @@ export function useLiveClassroomCall({
   const remoteStreamCleanupRef = useRef<Map<string, () => void>>(new Map());
   const participantCleanupRef = useRef<Map<string, () => void>>(new Map());
   const callCleanupRef = useRef<(() => void) | null>(null);
-  const hasBeenConnectedRef = useRef(false);
   const disposedRef = useRef(false);
+  const runtimeVersionRef = useRef(0);
+  const agentKeyRef = useRef<string | null>(null);
 
   const [isInitializing, setIsInitializing] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
@@ -160,11 +183,17 @@ export function useLiveClassroomCall({
   const [remoteTiles, setRemoteTiles] = useState<LiveClassroomVideoTile[]>([]);
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
+  const [hasBeenConnected, setHasBeenConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const clearError = useCallback(() => {
     setError(null);
   }, []);
+
+  const isRuntimeCurrent = useCallback(
+    (version: number) => !disposedRef.current && version === runtimeVersionRef.current,
+    [],
+  );
 
   const disposeRemoteTile = useCallback((key: string) => {
     const cleanup = remoteStreamCleanupRef.current.get(key);
@@ -183,28 +212,117 @@ export function useLiveClassroomCall({
     setRemoteTiles((current) => current.filter((tile) => tile.id !== key));
   }, []);
 
-  const disposeAllRemoteTiles = useCallback(() => {
-    for (const key of [...remoteStreamCleanupRef.current.keys()]) {
-      const cleanup = remoteStreamCleanupRef.current.get(key);
-      cleanup?.();
-    }
-    remoteStreamCleanupRef.current.clear();
+  const resetCallState = useCallback(
+    async (options?: {
+      hangUp?: boolean;
+      disposeAgent?: boolean;
+      disposePreview?: boolean;
+      disposeLocalStream?: boolean;
+      clearError?: boolean;
+    }) => {
+      runtimeVersionRef.current += 1;
 
-    for (const entry of remoteRendererEntriesRef.current.values()) {
-      entry.view.dispose();
-      entry.renderer.dispose();
-    }
-    remoteRendererEntriesRef.current.clear();
-    setRemoteTiles([]);
-  }, []);
+      const shouldHangUp = options?.hangUp ?? false;
+      const shouldDisposeAgent = options?.disposeAgent ?? false;
+      const shouldDisposePreview = options?.disposePreview ?? true;
+      const shouldDisposeLocalStream = options?.disposeLocalStream ?? shouldDisposePreview;
 
-  const disposeLocalPreview = useCallback(() => {
-    localPreviewViewRef.current?.dispose();
-    localPreviewRendererRef.current?.dispose();
-    localPreviewViewRef.current = null;
-    localPreviewRendererRef.current = null;
-    setLocalPreview(null);
-  }, []);
+      const call = callRef.current;
+      callRef.current = null;
+
+      const callCleanup = callCleanupRef.current;
+      callCleanupRef.current = null;
+
+      const participantCleanups = [...participantCleanupRef.current.values()];
+      participantCleanupRef.current.clear();
+
+      const remoteStreamCleanups = [...remoteStreamCleanupRef.current.values()];
+      remoteStreamCleanupRef.current.clear();
+
+      const remoteRendererEntries = [...remoteRendererEntriesRef.current.values()];
+      remoteRendererEntriesRef.current.clear();
+
+      const previewView = localPreviewViewRef.current;
+      const previewRenderer = localPreviewRendererRef.current;
+
+      if (shouldDisposePreview) {
+        localPreviewViewRef.current = null;
+        localPreviewRendererRef.current = null;
+      }
+
+      const localVideoStream = localVideoStreamRef.current;
+      if (shouldDisposeLocalStream) {
+        localVideoStreamRef.current = null;
+      }
+
+      const callAgent = shouldDisposeAgent ? callAgentRef.current : null;
+      const callClient = shouldDisposeAgent ? callClientRef.current : null;
+
+      if (shouldDisposeAgent) {
+        callAgentRef.current = null;
+        callClientRef.current = null;
+        deviceManagerRef.current = null;
+        agentKeyRef.current = null;
+      }
+
+      callCleanup?.();
+      participantCleanups.forEach((cleanup) => cleanup());
+      remoteStreamCleanups.forEach((cleanup) => cleanup());
+      remoteRendererEntries.forEach((entry) => {
+        entry.view.dispose();
+        entry.renderer.dispose();
+      });
+
+      if (shouldDisposePreview) {
+        previewView?.dispose();
+        previewRenderer?.dispose();
+        setLocalPreview(null);
+      }
+
+      if (shouldDisposeLocalStream) {
+        localVideoStream?.dispose();
+      }
+
+      setHasBeenConnected(false);
+      setIsInitializing(false);
+      setIsJoining(false);
+      setCallState('idle');
+      setRemoteTiles([]);
+      setIsMuted(false);
+      setIsCameraOn(
+        !shouldDisposePreview &&
+          !shouldDisposeLocalStream &&
+          Boolean(localVideoStreamRef.current || localVideoStream),
+      );
+
+      if (options?.clearError) {
+        setError(null);
+      }
+
+      if (shouldHangUp && call) {
+        try {
+          await call.hangUp();
+        } catch {
+          // No-op. Runtime refs and state are already cleared.
+        }
+      }
+
+      if (shouldDisposeAgent) {
+        try {
+          await callAgent?.dispose();
+        } catch {
+          // No-op. A failed dispose should not block recreation.
+        }
+
+        try {
+          await callClient?.dispose();
+        } catch {
+          // No-op. A failed dispose should not block recreation.
+        }
+      }
+    },
+    [],
+  );
 
   const ensureSdkLoaded = useCallback(async () => {
     if (sdkRef.current && commonSdkRef.current) {
@@ -231,13 +349,33 @@ export function useLiveClassroomCall({
       throw new Error('Azure Communication Services failed to load.');
     }
 
-    if (callAgentRef.current && deviceManagerRef.current) {
+    const joinTokenKey = JSON.stringify({
+      sessionId: joinToken.session.id,
+      userId: joinToken.acsUserId,
+      token: joinToken.token,
+      displayName: joinToken.displayName,
+    });
+
+    if (
+      callAgentRef.current &&
+      deviceManagerRef.current &&
+      agentKeyRef.current === joinTokenKey
+    ) {
       return {
         callAgent: callAgentRef.current,
         deviceManager: deviceManagerRef.current,
       };
     }
 
+    await resetCallState({
+      hangUp: true,
+      disposeAgent: true,
+      disposePreview: false,
+      disposeLocalStream: false,
+      clearError: false,
+    });
+
+    const runtimeVersion = runtimeVersionRef.current;
     const { CallClient } = sdkRef.current;
     const { AzureCommunicationTokenCredential } = commonSdkRef.current;
     const callClient = new CallClient();
@@ -247,52 +385,87 @@ export function useLiveClassroomCall({
     });
     const deviceManager = await callClient.getDeviceManager();
 
+    if (!isRuntimeCurrent(runtimeVersion)) {
+      try {
+        await callAgent.dispose();
+      } catch {
+        // No-op.
+      }
+
+      try {
+        await callClient.dispose();
+      } catch {
+        // No-op.
+      }
+
+      throw new Error('Azure Communication Services initialization was reset before completion.');
+    }
+
     callClientRef.current = callClient;
     callAgentRef.current = callAgent;
     deviceManagerRef.current = deviceManager;
+    agentKeyRef.current = joinTokenKey;
 
     return { callAgent, deviceManager };
-  }, [ensureSdkLoaded, joinToken]);
+  }, [ensureSdkLoaded, isRuntimeCurrent, joinToken, resetCallState]);
 
-  const renderLocalPreview = useCallback(async () => {
-    if (!sdkRef.current || !localVideoStreamRef.current) {
-      return;
-    }
+  const renderLocalPreview = useCallback(
+    async (expectedRuntimeVersion = runtimeVersionRef.current) => {
+      if (!sdkRef.current || !localVideoStreamRef.current) {
+        return;
+      }
 
-    if (localPreviewViewRef.current) {
-      setLocalPreview((current) =>
-        current
-          ? {
-              ...current,
-              target: localPreviewViewRef.current?.target ?? current.target,
-            }
-          : current,
-      );
-      return;
-    }
+      if (localPreviewViewRef.current) {
+        setLocalPreview((current) =>
+          current
+            ? {
+                ...current,
+                target: localPreviewViewRef.current?.target ?? current.target,
+              }
+            : current,
+        );
+        return;
+      }
 
-    const { VideoStreamRenderer } = sdkRef.current;
-    const renderer = new VideoStreamRenderer(localVideoStreamRef.current);
-    const view = await renderer.createView();
+      const { VideoStreamRenderer } = sdkRef.current;
+      const localVideoStream = localVideoStreamRef.current;
+      const renderer = new VideoStreamRenderer(localVideoStream);
+      const view = await renderer.createView();
 
-    localPreviewRendererRef.current = renderer;
-    localPreviewViewRef.current = view;
-    setLocalPreview({
-      id: 'local-preview',
-      participantId: 'local-preview',
-      displayName: 'Local preview',
-      target: view.target,
-      mediaStreamType: 'Video',
-      isReceiving: true,
-    });
-  }, []);
+      if (
+        !isRuntimeCurrent(expectedRuntimeVersion) ||
+        localVideoStreamRef.current !== localVideoStream
+      ) {
+        view.dispose();
+        renderer.dispose();
+        return;
+      }
+
+      localPreviewRendererRef.current = renderer;
+      localPreviewViewRef.current = view;
+      setLocalPreview({
+        id: 'local-preview',
+        participantId: 'local-preview',
+        displayName: 'Local preview',
+        target: view.target,
+        mediaStreamType: 'Video',
+        isReceiving: true,
+      });
+    },
+    [isRuntimeCurrent],
+  );
 
   const ensureLocalPreview = useCallback(async () => {
     const { deviceManager } = await ensureAgent();
+    const runtimeVersion = runtimeVersionRef.current;
 
     await deviceManager.askDevicePermission({ audio: true, video: true });
     const cameras = await deviceManager.getCameras();
     const firstCamera = cameras[0] as VideoDeviceInfo | undefined;
+
+    if (!isRuntimeCurrent(runtimeVersion)) {
+      return;
+    }
 
     if (!firstCamera) {
       throw new Error('No camera device is available for local preview.');
@@ -308,12 +481,16 @@ export function useLiveClassroomCall({
       localVideoStreamRef.current = new LocalVideoStream(firstCamera);
     }
 
-    await renderLocalPreview();
-  }, [ensureAgent, ensureSdkLoaded, renderLocalPreview]);
+    await renderLocalPreview(runtimeVersion);
+  }, [ensureAgent, ensureSdkLoaded, isRuntimeCurrent, renderLocalPreview]);
 
   const syncParticipantTile = useCallback(
-    async (participant: RemoteParticipant, stream: RemoteVideoStream) => {
-      if (!sdkRef.current) return;
+    async (
+      participant: RemoteParticipant,
+      stream: RemoteVideoStream,
+      expectedRuntimeVersion = runtimeVersionRef.current,
+    ) => {
+      if (!sdkRef.current || !isRuntimeCurrent(expectedRuntimeVersion)) return;
 
       const participantId = readIdentifierRawId(participant.identifier) || participant.displayName || 'participant';
       const tileId = `${participantId}:${stream.id}:${stream.mediaStreamType}`;
@@ -328,6 +505,13 @@ export function useLiveClassroomCall({
         const { VideoStreamRenderer } = sdkRef.current;
         const renderer = new VideoStreamRenderer(stream);
         const view = await renderer.createView();
+
+        if (!isRuntimeCurrent(expectedRuntimeVersion)) {
+          view.dispose();
+          renderer.dispose();
+          return;
+        }
+
         existing = { renderer, view };
         remoteRendererEntriesRef.current.set(tileId, existing);
       }
@@ -352,20 +536,28 @@ export function useLiveClassroomCall({
         return next;
       });
     },
-    [disposeRemoteTile],
+    [disposeRemoteTile, isRuntimeCurrent],
   );
 
   const subscribeToRemoteStream = useCallback(
-    async (participant: RemoteParticipant, stream: RemoteVideoStream) => {
+    async (
+      participant: RemoteParticipant,
+      stream: RemoteVideoStream,
+      expectedRuntimeVersion = runtimeVersionRef.current,
+    ) => {
+      if (!isRuntimeCurrent(expectedRuntimeVersion)) {
+        return;
+      }
+
       const participantId = readIdentifierRawId(participant.identifier) || participant.displayName || 'participant';
       const tileId = `${participantId}:${stream.id}:${stream.mediaStreamType}`;
 
       const handleAvailabilityChanged = () => {
-        void syncParticipantTile(participant, stream);
+        void syncParticipantTile(participant, stream, expectedRuntimeVersion);
       };
 
       const handleReceivingChanged = () => {
-        void syncParticipantTile(participant, stream);
+        void syncParticipantTile(participant, stream, expectedRuntimeVersion);
       };
 
       stream.on('isAvailableChanged', handleAvailabilityChanged);
@@ -376,17 +568,21 @@ export function useLiveClassroomCall({
         stream.off('isReceivingChanged', handleReceivingChanged);
       });
 
-      await syncParticipantTile(participant, stream);
+      await syncParticipantTile(participant, stream, expectedRuntimeVersion);
     },
-    [syncParticipantTile],
+    [isRuntimeCurrent, syncParticipantTile],
   );
 
   const subscribeToParticipant = useCallback(
-    async (participant: RemoteParticipant) => {
+    async (participant: RemoteParticipant, expectedRuntimeVersion = runtimeVersionRef.current) => {
+      if (!isRuntimeCurrent(expectedRuntimeVersion)) {
+        return;
+      }
+
       const participantId = readIdentifierRawId(participant.identifier) || participant.displayName || 'participant';
 
       for (const stream of participant.videoStreams) {
-        await subscribeToRemoteStream(participant, stream);
+        await subscribeToRemoteStream(participant, stream, expectedRuntimeVersion);
       }
 
       const handleVideoStreamsUpdated = (event: {
@@ -398,11 +594,15 @@ export function useLiveClassroomCall({
         }
 
         for (const addedStream of event.added) {
-          void subscribeToRemoteStream(participant, addedStream);
+          void subscribeToRemoteStream(participant, addedStream, expectedRuntimeVersion);
         }
       };
 
       const handleDisplayNameChanged = () => {
+        if (!isRuntimeCurrent(expectedRuntimeVersion)) {
+          return;
+        }
+
         setRemoteTiles((current) =>
           current.map((tile) =>
             tile.participantId === participantId
@@ -427,35 +627,33 @@ export function useLiveClassroomCall({
         }
       });
     },
-    [disposeRemoteTile, subscribeToRemoteStream],
+    [disposeRemoteTile, isRuntimeCurrent, subscribeToRemoteStream],
   );
-
-  const detachCallListeners = useCallback(() => {
-    callCleanupRef.current?.();
-    callCleanupRef.current = null;
-  }, []);
-
-  const cleanupParticipants = useCallback(() => {
-    for (const cleanup of participantCleanupRef.current.values()) {
-      cleanup();
-    }
-    participantCleanupRef.current.clear();
-    disposeAllRemoteTiles();
-  }, [disposeAllRemoteTiles]);
 
   const attachCall = useCallback(
     async (call: Call) => {
-      detachCallListeners();
-      cleanupParticipants();
+      await resetCallState({
+        hangUp: false,
+        disposeAgent: false,
+        disposePreview: false,
+        disposeLocalStream: false,
+        clearError: false,
+      });
+
+      const runtimeVersion = runtimeVersionRef.current;
+
+      if (!isRuntimeCurrent(runtimeVersion)) {
+        return;
+      }
 
       callRef.current = call;
       setCallState(call.state);
       setIsMuted(call.isMuted);
       setIsCameraOn(call.isLocalVideoStarted || Boolean(localVideoStreamRef.current));
-      hasBeenConnectedRef.current = hasBeenConnectedRef.current || call.state === 'Connected';
+      setHasBeenConnected((current) => current || call.state === 'Connected');
 
       for (const participant of call.remoteParticipants) {
-        await subscribeToParticipant(participant);
+        await subscribeToParticipant(participant, runtimeVersion);
       }
 
       const handleStateChanged = () => {
@@ -466,11 +664,17 @@ export function useLiveClassroomCall({
         setIsCameraOn(call.isLocalVideoStarted || Boolean(localVideoStreamRef.current));
 
         if (call.state === 'Connected') {
-          hasBeenConnectedRef.current = true;
+          setHasBeenConnected(true);
         }
 
         if (call.state === 'Disconnected') {
-          cleanupParticipants();
+          void resetCallState({
+            hangUp: false,
+            disposeAgent: false,
+            disposePreview: false,
+            disposeLocalStream: false,
+            clearError: false,
+          });
         }
       };
 
@@ -499,7 +703,7 @@ export function useLiveClassroomCall({
         }
 
         for (const addedParticipant of event.added) {
-          void subscribeToParticipant(addedParticipant);
+          void subscribeToParticipant(addedParticipant, runtimeVersion);
         }
       };
 
@@ -515,7 +719,7 @@ export function useLiveClassroomCall({
         call.off('remoteParticipantsUpdated', handleRemoteParticipantsUpdated);
       };
     },
-    [cleanupParticipants, detachCallListeners, subscribeToParticipant],
+    [isRuntimeCurrent, resetCallState, subscribeToParticipant],
   );
 
   const joinCall = useCallback(
@@ -528,16 +732,24 @@ export function useLiveClassroomCall({
       const locatorConfig = buildLocator(joinToken);
       if (!locatorConfig) {
         setError(
-          'This live session is not configured for ACS joining yet. Add an ACS room or supported call locator on the backend first.',
+          'This live session is not configured for ACS joining yet. The backend must provide a valid meeting type and matching locator field.',
         );
         return false;
       }
 
       setIsJoining(true);
       setError(null);
-      hasBeenConnectedRef.current = false;
+      setHasBeenConnected(false);
 
       try {
+        await resetCallState({
+          hangUp: true,
+          disposeAgent: false,
+          disposePreview: false,
+          disposeLocalStream: false,
+          clearError: false,
+        });
+
         const { callAgent } = await ensureAgent();
 
         if (options?.withVideo) {
@@ -552,19 +764,32 @@ export function useLiveClassroomCall({
               }
             : { audioOptions: { muted: options?.startMuted ?? false } };
 
-        let call: Call;
+        console.info('[LiveClassroomCall] ACS join locator', {
+          sessionId: joinToken.session.id,
+          locatorType: locatorConfig.type,
+          backendField: locatorConfig.backendField,
+          locator: locatorConfig.locator,
+        });
 
-        if (locatorConfig.type === 'room') {
-          const roomLocator = locatorConfig.locator as { roomId: string };
-          call = callAgent.join({ roomId: roomLocator.roomId }, joinOptions);
-        } else {
-          const groupLocator = locatorConfig.locator as { groupId: string };
-          call = callAgent.join({ groupId: groupLocator.groupId }, joinOptions);
-        }
+        const call =
+          locatorConfig.type === 'room'
+            ? callAgent.join(locatorConfig.locator, joinOptions)
+            : locatorConfig.type === 'group'
+              ? callAgent.join(locatorConfig.locator, joinOptions)
+              : locatorConfig.type === 'teamsMeetingLink'
+                ? callAgent.join(locatorConfig.locator, joinOptions)
+                : callAgent.join(locatorConfig.locator, joinOptions);
 
         await attachCall(call);
         return true;
       } catch (joinError) {
+        await resetCallState({
+          hangUp: true,
+          disposeAgent: false,
+          disposePreview: false,
+          disposeLocalStream: false,
+          clearError: false,
+        });
         setError(
           getLiveClassroomErrorMessage(joinError, 'Unable to connect to the live classroom.'),
         );
@@ -573,29 +798,18 @@ export function useLiveClassroomCall({
         setIsJoining(false);
       }
     },
-    [attachCall, ensureAgent, ensureLocalPreview, joinToken],
+    [attachCall, ensureAgent, ensureLocalPreview, joinToken, resetCallState],
   );
 
   const leaveCall = useCallback(async () => {
-    const call = callRef.current;
-    if (!call) {
-      return;
-    }
-
-    try {
-      await call.hangUp();
-    } catch {
-      // No-op. UI state is reset below.
-    } finally {
-      detachCallListeners();
-      cleanupParticipants();
-      callRef.current = null;
-      hasBeenConnectedRef.current = false;
-      setCallState('idle');
-      setIsMuted(false);
-      setIsCameraOn(Boolean(localVideoStreamRef.current));
-    }
-  }, [cleanupParticipants, detachCallListeners]);
+    await resetCallState({
+      hangUp: true,
+      disposeAgent: false,
+      disposePreview: false,
+      disposeLocalStream: false,
+      clearError: false,
+    });
+  }, [resetCallState]);
 
   const toggleMicrophone = useCallback(async () => {
     const call = callRef.current;
@@ -651,6 +865,46 @@ export function useLiveClassroomCall({
   }, [ensureLocalPreview, renderLocalPreview]);
 
   useEffect(() => {
+    disposedRef.current = false;
+
+    return () => {
+      disposedRef.current = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    void resetCallState({
+      hangUp: true,
+      disposeAgent: true,
+      disposePreview: true,
+      disposeLocalStream: true,
+      clearError: true,
+    });
+
+    return () => {
+      void resetCallState({
+        hangUp: true,
+        disposeAgent: true,
+        disposePreview: true,
+        disposeLocalStream: true,
+        clearError: false,
+      });
+    };
+  }, [
+    joinToken?.groupId,
+    joinToken?.meetingId,
+    joinToken?.meetingLink,
+    joinToken?.meetingType,
+    joinToken?.passcode,
+    joinToken?.roomId,
+    joinToken?.acsUserId,
+    joinToken?.displayName,
+    joinToken?.session.id,
+    joinToken?.token,
+    resetCallState,
+  ]);
+
+  useEffect(() => {
     if (!joinToken || !autoPrepareLocalPreview) {
       return;
     }
@@ -686,18 +940,6 @@ export function useLiveClassroomCall({
     };
   }, [autoPrepareLocalPreview, ensureLocalPreview, joinToken]);
 
-  useEffect(() => {
-    return () => {
-      disposedRef.current = true;
-      void leaveCall();
-      cleanupParticipants();
-      disposeLocalPreview();
-      localVideoStreamRef.current = null;
-      void callAgentRef.current?.dispose();
-      void callClientRef.current?.dispose();
-    };
-  }, [cleanupParticipants, disposeLocalPreview, leaveCall]);
-
   const supportsJoining = useMemo(() => Boolean(joinToken && buildLocator(joinToken)), [joinToken]);
 
   return {
@@ -705,7 +947,7 @@ export function useLiveClassroomCall({
     isJoining,
     callState,
     isConnected: callState === 'Connected',
-    isReconnecting: hasBeenConnectedRef.current && callState === 'Connecting',
+    isReconnecting: hasBeenConnected && callState === 'Connecting',
     localPreview,
     remoteTiles,
     isMuted,

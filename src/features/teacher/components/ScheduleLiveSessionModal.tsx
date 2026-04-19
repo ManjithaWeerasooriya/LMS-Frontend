@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ErrorAlert } from '@/components/ErrorAlert';
 import { getTeacherCourses, type TeacherCourse } from '@/features/teacher/api/teacher';
 import {
+  LIVE_SESSION_MEETING_TYPE,
   createTeacherLiveSession,
   getLiveSessionErrorMessage,
   type TeacherLiveSessionInput,
@@ -28,6 +29,12 @@ const initialFormState: ScheduleLiveSessionFormState = {
   durationMinutes: 60,
   recordingEnabled: false,
   playbackEnabled: false,
+  meetingType: LIVE_SESSION_MEETING_TYPE.room,
+  roomId: '',
+  groupId: '',
+  meetingLink: '',
+  meetingId: '',
+  passcode: '',
 };
 
 export function ScheduleLiveSessionModal({
@@ -97,7 +104,21 @@ export function ScheduleLiveSessionModal({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!form.courseId || !form.title.trim() || !form.startTimeLocal || form.durationMinutes <= 0) {
+    const hasMeetingLocator =
+      (form.meetingType === LIVE_SESSION_MEETING_TYPE.room && form.roomId.trim()) ||
+      (form.meetingType === LIVE_SESSION_MEETING_TYPE.group && form.groupId.trim()) ||
+      (form.meetingType === LIVE_SESSION_MEETING_TYPE.teams &&
+        (form.meetingLink.trim() ||
+          (form.meetingId.trim() && form.passcode.trim())));
+
+    if (
+      !form.courseId ||
+      !form.title.trim() ||
+      !form.startTimeLocal ||
+      form.durationMinutes <= 0 ||
+      !hasMeetingLocator
+    ) {
+      setError('Complete the required meeting type and locator fields before scheduling.');
       return;
     }
 
@@ -112,6 +133,26 @@ export function ScheduleLiveSessionModal({
         durationMinutes: form.durationMinutes,
         recordingEnabled: form.recordingEnabled,
         playbackEnabled: form.playbackEnabled,
+        ...(form.meetingType === LIVE_SESSION_MEETING_TYPE.room
+          ? {
+              meetingType: LIVE_SESSION_MEETING_TYPE.room as const,
+              roomId: form.roomId.trim(),
+            }
+          : form.meetingType === LIVE_SESSION_MEETING_TYPE.group
+            ? {
+                meetingType: LIVE_SESSION_MEETING_TYPE.group as const,
+                groupId: form.groupId.trim(),
+              }
+            : form.meetingLink.trim()
+              ? {
+                  meetingType: LIVE_SESSION_MEETING_TYPE.teams as const,
+                  meetingLink: form.meetingLink.trim(),
+                }
+              : {
+                  meetingType: LIVE_SESSION_MEETING_TYPE.teams as const,
+                  meetingId: form.meetingId.trim(),
+                  passcode: form.passcode.trim(),
+                }),
       });
 
       onClose();
@@ -133,10 +174,16 @@ export function ScheduleLiveSessionModal({
   const canSubmit =
     !isLoadingCourses &&
     courses.length > 0 &&
-    form.courseId &&
-    form.title.trim() &&
-    form.startTimeLocal &&
-    form.durationMinutes > 0;
+    Boolean(form.courseId) &&
+    Boolean(form.title.trim()) &&
+    Boolean(form.startTimeLocal) &&
+    form.durationMinutes > 0 &&
+    Boolean(
+      (form.meetingType === LIVE_SESSION_MEETING_TYPE.room && form.roomId.trim()) ||
+        (form.meetingType === LIVE_SESSION_MEETING_TYPE.group && form.groupId.trim()) ||
+        (form.meetingType === LIVE_SESSION_MEETING_TYPE.teams &&
+          (form.meetingLink.trim() || (form.meetingId.trim() && form.passcode.trim()))),
+    );
 
   return (
     <div
@@ -264,6 +311,28 @@ export function ScheduleLiveSessionModal({
                 className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
               />
             </div>
+
+            <div className="space-y-2">
+              <label
+                className="text-xs font-semibold text-slate-700"
+                htmlFor="live-session-meeting-type"
+              >
+                Meeting type
+              </label>
+              <select
+                id="live-session-meeting-type"
+                value={form.meetingType}
+                onChange={(event) =>
+                  handleChange('meetingType', Number(event.target.value) as ScheduleLiveSessionFormState['meetingType'])
+                }
+                disabled={isSubmitting}
+                className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+              >
+                <option value={LIVE_SESSION_MEETING_TYPE.room}>Room</option>
+                <option value={LIVE_SESSION_MEETING_TYPE.group}>Group</option>
+                <option value={LIVE_SESSION_MEETING_TYPE.teams}>Teams</option>
+              </select>
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -303,6 +372,95 @@ export function ScheduleLiveSessionModal({
               </span>
             </label>
           </div>
+
+          {form.meetingType === LIVE_SESSION_MEETING_TYPE.room ? (
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-700" htmlFor="schedule-live-session-room-id">
+                Room ID
+              </label>
+              <input
+                id="schedule-live-session-room-id"
+                type="text"
+                value={form.roomId}
+                onChange={(event) => handleChange('roomId', event.target.value)}
+                disabled={isSubmitting}
+                className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                placeholder="ACS room ID"
+              />
+            </div>
+          ) : null}
+
+          {form.meetingType === LIVE_SESSION_MEETING_TYPE.group ? (
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-700" htmlFor="schedule-live-session-group-id">
+                Group ID
+              </label>
+              <input
+                id="schedule-live-session-group-id"
+                type="text"
+                value={form.groupId}
+                onChange={(event) => handleChange('groupId', event.target.value)}
+                disabled={isSubmitting}
+                className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                placeholder="ACS group ID"
+              />
+            </div>
+          ) : null}
+
+          {form.meetingType === LIVE_SESSION_MEETING_TYPE.teams ? (
+            <div className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-700" htmlFor="schedule-live-session-meeting-link">
+                  Teams meeting link
+                </label>
+                <input
+                  id="schedule-live-session-meeting-link"
+                  type="text"
+                  value={form.meetingLink ?? ''}
+                  onChange={(event) => handleChange('meetingLink', event.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  placeholder="https://teams.microsoft.com/l/meetup-join/..."
+                />
+              </div>
+
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                Or use meeting ID and passcode
+              </p>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-700" htmlFor="schedule-live-session-meeting-id">
+                    Meeting ID
+                  </label>
+                  <input
+                    id="schedule-live-session-meeting-id"
+                    type="text"
+                    value={form.meetingId ?? ''}
+                    onChange={(event) => handleChange('meetingId', event.target.value)}
+                    disabled={isSubmitting}
+                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                    placeholder="Teams meeting ID"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-700" htmlFor="schedule-live-session-passcode">
+                    Passcode
+                  </label>
+                  <input
+                    id="schedule-live-session-passcode"
+                    type="text"
+                    value={form.passcode ?? ''}
+                    onChange={(event) => handleChange('passcode', event.target.value)}
+                    disabled={isSubmitting}
+                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                    placeholder="Teams passcode"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <div className="flex justify-end gap-3">
             <button
