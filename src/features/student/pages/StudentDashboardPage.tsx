@@ -38,6 +38,46 @@ const initialState: DashboardState = {
   error: null,
 };
 
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+const normalizeDashboardSummary = (summary: unknown): StudentDashboardSummary | null => {
+  if (!summary || typeof summary !== 'object') {
+    return null;
+  }
+
+  const record = summary as Record<string, unknown>;
+
+  return {
+    enrolledCourses: isFiniteNumber(record.enrolledCourses) ? record.enrolledCourses : 0,
+    upcomingLiveSessions: isFiniteNumber(record.upcomingLiveSessions)
+      ? record.upcomingLiveSessions
+      : isFiniteNumber(record.upcomingClasses)
+        ? record.upcomingClasses
+        : 0,
+    pendingQuizzes: isFiniteNumber(record.pendingQuizzes) ? record.pendingQuizzes : 0,
+  };
+};
+
+const normalizeDashboardState = (
+  data: Awaited<ReturnType<typeof getStudentDashboard>>,
+): Pick<DashboardState, 'summary' | 'myCourses' | 'upcomingLiveSessions' | 'pendingQuizzes'> => {
+  const legacyData = data as {
+    upcomingClasses?: StudentDashboardLiveSession[];
+  };
+
+  return {
+    summary: normalizeDashboardSummary(data.summary),
+    myCourses: Array.isArray(data.myCourses) ? data.myCourses : [],
+    upcomingLiveSessions: Array.isArray(data.upcomingLiveSessions)
+      ? data.upcomingLiveSessions
+      : Array.isArray(legacyData.upcomingClasses)
+        ? legacyData.upcomingClasses
+        : [],
+    pendingQuizzes: Array.isArray(data.pendingQuizzes) ? data.pendingQuizzes : [],
+  };
+};
+
 export default function StudentDashboardPage() {
   const router = useRouter();
   const [state, setState] = useState<DashboardState>(initialState);
@@ -51,10 +91,7 @@ export default function StudentDashboardPage() {
         if (!active) return;
 
         setState({
-          summary: data.summary,
-          myCourses: data.myCourses,
-          upcomingLiveSessions: data.upcomingLiveSessions,
-          pendingQuizzes: data.pendingQuizzes,
+          ...normalizeDashboardState(data),
           loading: false,
           error: null,
         });
