@@ -4,10 +4,14 @@ import type {
   CourseListItemDto,
   CreateCourseRequestDto,
   CreateQuizDto,
-  LiveClassListItemDto,
-  ScheduleLiveClassRequestDto,
+  LiveSessionStatus,
   TeacherDashboardResponseDto,
 } from '@/generated/api-types';
+import {
+  LIVE_SESSION_STATUS,
+  getTeacherLiveSessionsByCourse,
+  type TeacherLiveSession,
+} from '@/features/teacher/live-sessions/api';
 
 // Types mirroring the backend DTOs (simplified to what the UI needs).
 
@@ -38,13 +42,15 @@ export type CompletionRate = {
   percent: number;
 };
 
-export type LiveSession = {
+export type TeacherDashboardLiveSession = {
   id: string;
-  topic: string;
-  courseTitle?: string | null;
-  scheduledAt: string;
+  courseId?: string | null;
+  title: string;
+  courseTitle: string | null;
+  startTime: string;
+  durationMinutes: number | null;
   studentsEnrolled: number;
-  meetingLink?: string | null;
+  status: LiveSessionStatus;
 };
 
 export type PendingSubmission = {
@@ -90,21 +96,97 @@ export type TeacherCourseDetail = {
   status: string;
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const readString = (record: Record<string, unknown>, keys: string[]): string | null => {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return null;
+};
+
+const readNumber = (record: Record<string, unknown>, keys: string[]): number | null => {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim()) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+};
+
+const normalizeLiveSessionStatus = (value: unknown): LiveSessionStatus => {
+  if (typeof value === 'number' && value >= 1 && value <= 4) {
+    return value as LiveSessionStatus;
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 4) {
+      return parsed as LiveSessionStatus;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'scheduled') return LIVE_SESSION_STATUS.scheduled;
+    if (normalized === 'live') return LIVE_SESSION_STATUS.live;
+    if (normalized === 'ended') return LIVE_SESSION_STATUS.ended;
+    if (normalized === 'cancelled') return LIVE_SESSION_STATUS.cancelled;
+  }
+
+  return LIVE_SESSION_STATUS.scheduled;
+};
+
+const normalizeDashboardLiveSession = (value: unknown): TeacherDashboardLiveSession => {
+  const record = isRecord(value) ? value : {};
+
+  return {
+    id: readString(record, ['id', 'sessionId', 'liveSessionId', 'liveClassId']) ?? '',
+    courseId: readString(record, ['courseId']) ?? null,
+    title: readString(record, ['title', 'topic', 'name']) ?? 'Live Session',
+    courseTitle: readString(record, ['courseTitle']) ?? null,
+    startTime: readString(record, ['startTime', 'scheduledAt', 'startsAt']) ?? '',
+    durationMinutes: readNumber(record, ['durationMinutes']) ?? null,
+    studentsEnrolled: readNumber(record, ['studentsEnrolled', 'studentCount', 'attendees']) ?? 0,
+    status: normalizeLiveSessionStatus(record.status),
+  };
+};
+
 export async function getTeacherDashboard(): Promise<{
   summary: TeacherDashboardSummary;
   courses: DashboardCourse[];
   performance: PerformanceSlice[];
   completion: CompletionRate[];
-  sessions: LiveSession[];
+  sessions: TeacherDashboardLiveSession[];
   submissions: PendingSubmission[];
 }> {
-  const { data } = await apiClient.get<TeacherDashboardResponseDto>('/api/v1/teacher/dashboard');
+  const { data } = await apiClient.get<TeacherDashboardResponseDto & Record<string, unknown>>(
+    '/api/v1/teacher/dashboard',
+  );
+  const summaryRecord = isRecord(data.summary) ? data.summary : {};
+  const liveSessionItems = Array.isArray(data.upcomingLiveSessions)
+    ? data.upcomingLiveSessions
+    : Array.isArray(data.upcomingClasses)
+      ? data.upcomingClasses
+      : [];
 
   const summary: TeacherDashboardSummary = {
-    myCourses: data.summary?.myCourses ?? 0,
-    totalStudents: data.summary?.totalStudents ?? 0,
-    pendingSubmissions: data.summary?.pendingSubmissions ?? 0,
-    upcomingLiveSessions: data.summary?.upcomingLiveSessions ?? 0,
+    myCourses: readNumber(summaryRecord, ['myCourses']) ?? 0,
+    totalStudents: readNumber(summaryRecord, ['totalStudents']) ?? 0,
+    pendingSubmissions: readNumber(summaryRecord, ['pendingSubmissions']) ?? 0,
+    upcomingLiveSessions:
+      readNumber(summaryRecord, ['upcomingLiveSessions', 'upcomingClasses']) ?? 0,
   };
 
   const courses: DashboardCourse[] = (data.myCourses ?? []).map((course) => ({
@@ -128,14 +210,12 @@ export async function getTeacherDashboard(): Promise<{
     percent: item.completionRate ?? 0,
   }));
 
-  const sessions: LiveSession[] = (data.upcomingLiveSessions ?? []).map((session) => ({
-    id: session.liveClassId ?? '',
-    topic: session.topic?.trim() || 'Live Class',
-    courseTitle: session.courseTitle ?? undefined,
-    scheduledAt: session.scheduledAt ?? '',
-    studentsEnrolled: session.studentsEnrolled ?? 0,
-    meetingLink: session.meetingLink ?? undefined,
-  }));
+  const sessions = liveSessionItems
+    .map(normalizeDashboardLiveSession)
+    .filter((session) => session.id)
+    .sort(
+      (left, right) => new Date(left.startTime).getTime() - new Date(right.startTime).getTime(),
+    );
 
   const submissions: PendingSubmission[] = (data.pendingSubmissions ?? []).map((submission) => ({
     assignmentId: submission.assignmentId ?? '',
@@ -200,16 +280,22 @@ export async function getTeacherQuizzes(): Promise<TeacherQuiz[]> {
   return data;
 }
 
-export async function getTeacherLiveSessions(): Promise<LiveSession[]> {
-  const { data } = await apiClient.get<LiveClassListItemDto[]>('/api/v1/teacher/live-classes');
-  return data.map((session) => ({
-    id: session.id ?? '',
-    topic: session.topic?.trim() || 'Live Class',
-    courseTitle: session.courseTitle ?? undefined,
-    scheduledAt: session.scheduledAt ?? '',
-    studentsEnrolled: session.studentsEnrolled ?? 0,
-    meetingLink: session.meetingLink ?? undefined,
-  }));
+export async function getTeacherAllLiveSessions(): Promise<TeacherLiveSession[]> {
+  const courses = await getTeacherCourses();
+
+  if (courses.length === 0) {
+    return [];
+  }
+
+  const sessionResults = await Promise.allSettled(
+    courses.map((course) => getTeacherLiveSessionsByCourse(course.id)),
+  );
+
+  return sessionResults
+    .flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
+    .sort(
+      (left, right) => new Date(left.startTime).getTime() - new Date(right.startTime).getTime(),
+    );
 }
 
 export async function getTeacherPendingSubmissions(): Promise<PendingSubmission[]> {
@@ -265,31 +351,6 @@ export async function updateCourse(id: string, input: CreateCourseInput): Promis
 
 export async function deleteCourse(id: string): Promise<void> {
   await apiClient.delete(`/api/v1/teacher/courses/${id}`);
-}
-
-export type ScheduleLiveClassInput = {
-  topic: string;
-  date: string;
-  time: string;
-  meetingLink?: string;
-  enableRecording?: boolean;
-  durationMinutes?: number;
-  courseId?: string;
-};
-
-export async function scheduleLiveClass(input: ScheduleLiveClassInput): Promise<void> {
-  const scheduledLocal = new Date(`${input.date}T${input.time}`);
-
-  const payload: ScheduleLiveClassRequestDto = {
-    topic: input.topic.trim(),
-    courseId: input.courseId ?? null,
-    scheduledAt: scheduledLocal.toISOString(),
-    meetingLink: input.meetingLink?.trim() || null,
-    enableRecording: input.enableRecording ?? false,
-    durationMinutes: input.durationMinutes ?? null,
-  };
-
-  await apiClient.post('/api/v1/teacher/live-classes', payload);
 }
 
 export type CreateQuizInput = {

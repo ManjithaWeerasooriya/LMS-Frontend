@@ -197,9 +197,12 @@ export default function TeacherCoursesPage() {
                           <div className="flex items-center gap-3">
                             <div className="h-9 w-9 rounded-2xl bg-linear-to-br from-blue-500 to-indigo-600" />
                             <div>
-                              <p className="text-sm font-semibold text-slate-900">
+                              <Link
+                                href={`/teacher/dashboard/courses/${course.id}`}
+                                className="text-sm font-semibold text-slate-900 transition hover:text-blue-700"
+                              >
                                 {course.title}
-                              </p>
+                              </Link>
                               <p className="text-xs text-slate-500">
                                 {course.students} students enrolled
                               </p>
@@ -226,7 +229,13 @@ export default function TeacherCoursesPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-3 text-slate-500">
+                          <div className="flex flex-wrap items-center gap-2 text-slate-500">
+                            <Link
+                              href={`/teacher/dashboard/courses/${course.id}`}
+                              className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                            >
+                              Manage
+                            </Link>
                             <Link
                               href={`/teacher/dashboard/courses/${course.id}/quizzes`}
                               className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 transition transform hover:scale-105 hover:bg-slate-200"

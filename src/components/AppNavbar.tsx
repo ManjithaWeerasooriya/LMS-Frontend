@@ -2,13 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 
-import {
-  AUTH_STATE_CHANGE_EVENT,
-  getStoredAuthSession,
-  type UserRole,
-} from '@/lib/auth';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile';
+import { useAuthSession } from '@/hooks/useAuthSession';
+import { type UserRole } from '@/lib/auth';
 
 type NavbarLink = {
   href: string;
@@ -22,11 +20,6 @@ type AppNavbarProps = {
   contentClassName?: string;
 };
 
-type NavbarUser = {
-  name: string;
-  role: UserRole;
-};
-
 const defaultLinks: NavbarLink[] = [
   { href: '/', label: 'Home' },
   { href: '/courses', label: 'Courses' },
@@ -38,6 +31,28 @@ const isActiveLink = (pathname: string, href: string) => {
   }
 
   return pathname === href || pathname.startsWith(`${href}/`);
+};
+
+const getDisplayName = (sessionName: string | null, firstName?: string | null, lastName?: string | null) => {
+  const fullName = [firstName?.trim(), lastName?.trim()].filter(Boolean).join(' ').trim();
+  return fullName || sessionName?.trim() || 'My Account';
+};
+
+const getInitials = (displayName: string) => {
+  const parts = displayName
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    return 'MA';
+  }
+
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+
+  return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
 };
 
 const getUserHomeHref = (role: UserRole) => {
@@ -55,31 +70,13 @@ export function AppNavbar({
   contentClassName = 'mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8',
 }: AppNavbarProps) {
   const pathname = usePathname();
-  const [user, setUser] = useState<NavbarUser | null>(null);
-
-  useEffect(() => {
-    const syncUser = () => {
-      const session = getStoredAuthSession();
-      const role = session.role;
-      const name = session.name;
-
-      if (!session.token || !role || !name) {
-        setUser(null);
-        return;
-      }
-
-      setUser({ name, role });
-    };
-
-    syncUser();
-    window.addEventListener('storage', syncUser);
-    window.addEventListener(AUTH_STATE_CHANGE_EVENT, syncUser);
-
-    return () => {
-      window.removeEventListener('storage', syncUser);
-      window.removeEventListener(AUTH_STATE_CHANGE_EVENT, syncUser);
-    };
-  }, []);
+  const session = useAuthSession();
+  const { profile } = useCurrentUserProfile();
+  const userRole = session.role;
+  const displayName = getDisplayName(session.name, profile?.firstName, profile?.lastName);
+  const avatarInitials = getInitials(displayName);
+  const profileImageUrl = profile?.profileImageUrl?.trim() || null;
+  const showUser = Boolean(session.token && userRole);
 
   return (
     <header className="border-b border-slate-200 bg-white shadow-sm">
@@ -119,12 +116,23 @@ export function AppNavbar({
             })}
           </nav>
 
-          {user ? (
+          {showUser && userRole ? (
             <Link
-              href={getUserHomeHref(user.role)}
-              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:bg-white"
+              href={getUserHomeHref(userRole)}
+              className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:bg-white"
             >
-              {user.name}
+              {profileImageUrl ? (
+                <img
+                  src={profileImageUrl}
+                  alt={displayName}
+                  className="h-10 w-10 rounded-full border border-slate-200 object-cover"
+                />
+              ) : (
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1B3B8B] text-xs font-bold text-white">
+                  {avatarInitials}
+                </span>
+              )}
+              <span className="hidden sm:inline">{displayName}</span>
             </Link>
           ) : actions ? (
             <div className="flex items-center gap-3">{actions}</div>
