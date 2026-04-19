@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { ErrorAlert } from '@/components/ErrorAlert';
 import { useConfirm } from '@/context/ConfirmContext';
 import {
-  LIVE_SESSION_MEETING_TYPE,
   LIVE_SESSION_STATUS,
   cancelTeacherLiveSession,
   createTeacherLiveSession,
@@ -192,12 +191,6 @@ export function TeacherCourseLiveSessionsSection({
         durationMinutes: editingSession.durationMinutes,
         recordingEnabled: editingSession.recordingEnabled,
         playbackEnabled: editingSession.playbackEnabled,
-        meetingType: editingSession.meetingType ?? LIVE_SESSION_MEETING_TYPE.room,
-        roomId: editingSession.roomId ?? editingSession.acsRoomId ?? '',
-        groupId: editingSession.groupId ?? '',
-        meetingLink: editingSession.meetingLink ?? '',
-        meetingId: editingSession.meetingId ?? '',
-        passcode: editingSession.passcode ?? '',
       }
     : undefined;
 

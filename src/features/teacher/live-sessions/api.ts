@@ -3,7 +3,6 @@ import { isAxiosError } from 'axios';
 import type {
   CreateLiveSessionRequestDto,
   LiveSessionStatus,
-  MeetingType,
   UpdateLiveSessionRequestDto,
 } from '@/generated/api-types';
 import { apiClient } from '@/lib/http';
@@ -16,13 +15,6 @@ export const LIVE_SESSION_STATUS = {
 };
 
 export type LiveSessionRecordingStatus = 1 | 2 | 3 | 4;
-export type TeacherLiveSessionMeetingType = 1 | 2 | 3;
-
-export const LIVE_SESSION_MEETING_TYPE = {
-  room: 1 as TeacherLiveSessionMeetingType,
-  group: 2 as TeacherLiveSessionMeetingType,
-  teams: 3 as TeacherLiveSessionMeetingType,
-};
 
 export type TeacherLiveSession = {
   id: string;
@@ -35,12 +27,7 @@ export type TeacherLiveSession = {
   status: LiveSessionStatus;
   recordingEnabled: boolean;
   playbackEnabled: boolean;
-  meetingType?: TeacherLiveSessionMeetingType | null;
   roomId?: string | null;
-  groupId?: string | null;
-  meetingLink?: string | null;
-  meetingId?: string | null;
-  passcode?: string | null;
   acsRoomId?: string | null;
   acsCallLocator?: string | null;
   chatThreadId?: string | null;
@@ -61,40 +48,7 @@ export type TeacherLiveSessionInput = {
   durationMinutes: number;
   recordingEnabled: boolean;
   playbackEnabled: boolean;
-} & (
-  | {
-      meetingType: typeof LIVE_SESSION_MEETING_TYPE.room;
-      roomId: string;
-      groupId?: never;
-      meetingLink?: never;
-      meetingId?: never;
-      passcode?: never;
-    }
-  | {
-      meetingType: typeof LIVE_SESSION_MEETING_TYPE.group;
-      groupId: string;
-      roomId?: never;
-      meetingLink?: never;
-      meetingId?: never;
-      passcode?: never;
-    }
-  | {
-      meetingType: typeof LIVE_SESSION_MEETING_TYPE.teams;
-      meetingLink: string;
-      roomId?: never;
-      groupId?: never;
-      meetingId?: never;
-      passcode?: never;
-    }
-  | {
-      meetingType: typeof LIVE_SESSION_MEETING_TYPE.teams;
-      meetingId: string;
-      passcode: string;
-      roomId?: never;
-      groupId?: never;
-      meetingLink?: never;
-    }
-);
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -236,26 +190,6 @@ const normalizeRecordingStatus = (value: unknown): LiveSessionRecordingStatus =>
   return 1;
 };
 
-const normalizeMeetingType = (value: unknown): TeacherLiveSessionMeetingType | null => {
-  if (value === 1 || value === 2 || value === 3) {
-    return value;
-  }
-
-  if (typeof value === 'string' && value.trim()) {
-    const parsed = Number(value);
-    if (parsed === 1 || parsed === 2 || parsed === 3) {
-      return parsed as TeacherLiveSessionMeetingType;
-    }
-
-    const normalized = value.trim().toLowerCase();
-    if (normalized === 'room') return LIVE_SESSION_MEETING_TYPE.room;
-    if (normalized === 'group') return LIVE_SESSION_MEETING_TYPE.group;
-    if (normalized === 'teams') return LIVE_SESSION_MEETING_TYPE.teams;
-  }
-
-  return null;
-};
-
 const normalizeLiveSession = (value: unknown): TeacherLiveSession => {
   const record = unwrapEntity(value, ['session', 'liveSession']);
   const courseRecord = readRecord(record, ['course']);
@@ -278,12 +212,7 @@ const normalizeLiveSession = (value: unknown): TeacherLiveSession => {
     status: normalizeLiveSessionStatus(record.status),
     recordingEnabled: readBoolean(record, ['recordingEnabled', 'enableRecording']) ?? false,
     playbackEnabled: readBoolean(record, ['playbackEnabled']) ?? false,
-    meetingType: normalizeMeetingType(record.meetingType),
     roomId: readString(record, ['roomId']) ?? null,
-    groupId: readString(record, ['groupId']) ?? null,
-    meetingLink: readString(record, ['meetingLink']) ?? null,
-    meetingId: readString(record, ['meetingId']) ?? null,
-    passcode: readString(record, ['passcode']) ?? null,
     acsRoomId: readString(record, ['acsRoomId']) ?? null,
     acsCallLocator: readString(record, ['acsCallLocator']) ?? null,
     chatThreadId: readString(record, ['chatThreadId']) ?? null,
@@ -301,41 +230,13 @@ const normalizeLiveSession = (value: unknown): TeacherLiveSession => {
 const toLiveSessionPayload = (
   input: TeacherLiveSessionInput,
 ): CreateLiveSessionRequestDto | UpdateLiveSessionRequestDto => {
-  const basePayload: CreateLiveSessionRequestDto | UpdateLiveSessionRequestDto = {
+  return {
     title: input.title.trim(),
     description: input.description?.trim() || null,
     startTime: new Date(input.startTimeLocal).toISOString(),
     durationMinutes: input.durationMinutes,
     recordingEnabled: input.recordingEnabled,
     playbackEnabled: input.playbackEnabled,
-    meetingType: input.meetingType as MeetingType,
-  };
-
-  if (input.meetingType === LIVE_SESSION_MEETING_TYPE.room) {
-    return {
-      ...basePayload,
-      roomId: input.roomId.trim(),
-    };
-  }
-
-  if (input.meetingType === LIVE_SESSION_MEETING_TYPE.group) {
-    return {
-      ...basePayload,
-      groupId: input.groupId.trim(),
-    };
-  }
-
-  if ('meetingLink' in input) {
-    return {
-      ...basePayload,
-      meetingLink: input.meetingLink.trim(),
-    };
-  }
-
-  return {
-    ...basePayload,
-    meetingId: input.meetingId.trim(),
-    passcode: input.passcode.trim(),
   };
 };
 

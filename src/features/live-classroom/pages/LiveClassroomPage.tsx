@@ -661,9 +661,8 @@ export default function LiveClassroomPage({
 
                     {!call.supportsJoining ? (
                       <div className="rounded-3xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-                        This classroom does not have a valid ACS join locator yet. The backend must
-                        provide a `meetingType` plus the matching `roomId`, `groupId`, `meetingLink`,
-                        or `meetingId`/`passcode` before anyone can join.
+                        This classroom does not have a valid ACS room configured yet. The backend
+                        must provide room-based join data before anyone can join.
                       </div>
                     ) : null}
                   </div>

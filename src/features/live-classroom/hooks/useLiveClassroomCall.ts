@@ -56,26 +56,11 @@ type UseLiveClassroomCallResult = {
 };
 
 type NormalizedJoinLocator =
-  | {
-      type: 'room';
-      locator: { roomId: string };
-      backendField: 'roomId';
-    }
-  | {
-      type: 'group';
-      locator: { groupId: string };
-      backendField: 'groupId';
-    }
-  | {
-      type: 'teamsMeetingLink';
-      locator: { meetingLink: string };
-      backendField: 'meetingLink';
-    }
-  | {
-      type: 'teamsMeetingId';
-      locator: { meetingId: string; passcode?: string };
-      backendField: 'meetingId';
-    };
+  {
+    type: 'room';
+    locator: { roomId: string };
+    backendField: 'roomId';
+  };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -104,53 +89,13 @@ const normalizeLocatorValue = (value: string | null | undefined) => {
 
 export const buildLocator = (joinToken: LiveClassroomJoinToken): NormalizedJoinLocator | null => {
   const roomId = normalizeLocatorValue(joinToken.roomId);
-  const groupId = normalizeLocatorValue(joinToken.groupId);
-  const meetingLink = normalizeLocatorValue(joinToken.meetingLink);
-  const meetingId = normalizeLocatorValue(joinToken.meetingId);
-  const passcode = normalizeLocatorValue(joinToken.passcode);
-
-  const populatedLocatorFields = [roomId, groupId, meetingLink, meetingId].filter(Boolean);
-  if (!joinToken.meetingType || populatedLocatorFields.length !== 1) {
-    return null;
-  }
-
-  if (joinToken.meetingType === 'room') {
-    return roomId
-      ? {
-          type: 'room',
-          locator: { roomId },
-          backendField: 'roomId',
-        }
-      : null;
-  }
-
-  if (joinToken.meetingType === 'group') {
-    return groupId
-      ? {
-          type: 'group',
-          locator: { groupId },
-          backendField: 'groupId',
-        }
-      : null;
-  }
-
-  if (meetingLink) {
-    return {
-      type: 'teamsMeetingLink',
-      locator: { meetingLink },
-      backendField: 'meetingLink',
-    };
-  }
-
-  if (!meetingId) {
-    return null;
-  }
-
-  return {
-    type: 'teamsMeetingId',
-    locator: passcode ? { meetingId, passcode } : { meetingId },
-    backendField: 'meetingId',
-  };
+  return roomId
+    ? {
+        type: 'room',
+        locator: { roomId },
+        backendField: 'roomId',
+      }
+    : null;
 };
 
 export function useLiveClassroomCall({
@@ -771,14 +716,7 @@ export function useLiveClassroomCall({
           locator: locatorConfig.locator,
         });
 
-        const call =
-          locatorConfig.type === 'room'
-            ? callAgent.join(locatorConfig.locator, joinOptions)
-            : locatorConfig.type === 'group'
-              ? callAgent.join(locatorConfig.locator, joinOptions)
-              : locatorConfig.type === 'teamsMeetingLink'
-                ? callAgent.join(locatorConfig.locator, joinOptions)
-                : callAgent.join(locatorConfig.locator, joinOptions);
+        const call = callAgent.join(locatorConfig.locator, joinOptions);
 
         await attachCall(call);
         return true;
@@ -891,11 +829,6 @@ export function useLiveClassroomCall({
       });
     };
   }, [
-    joinToken?.groupId,
-    joinToken?.meetingId,
-    joinToken?.meetingLink,
-    joinToken?.meetingType,
-    joinToken?.passcode,
     joinToken?.roomId,
     joinToken?.acsUserId,
     joinToken?.displayName,
