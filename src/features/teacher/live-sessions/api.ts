@@ -47,7 +47,6 @@ export type TeacherLiveSessionInput = {
   durationMinutes: number;
   recordingEnabled: boolean;
   playbackEnabled: boolean;
-  status?: LiveSessionStatus;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -233,7 +232,6 @@ const toLiveSessionPayload = (
   description: input.description?.trim() || null,
   startTime: new Date(input.startTimeLocal).toISOString(),
   durationMinutes: input.durationMinutes,
-  status: input.status ?? LIVE_SESSION_STATUS.scheduled,
   recordingEnabled: input.recordingEnabled,
   playbackEnabled: input.playbackEnabled,
 });

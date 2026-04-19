@@ -97,7 +97,6 @@ export type CreateLiveSessionRequestDto = {
   "description"?: string | null;
   "startTime": string;
   "durationMinutes"?: number;
-  "status"?: LiveSessionStatus;
   "recordingEnabled"?: boolean;
   "playbackEnabled"?: boolean;
   "acsRoomId"?: string | null;
@@ -144,26 +143,13 @@ export type ForgotPasswordRequest = {
   "email": string;
 };
 
-export type LiveSessionListItemDto = {
-  "id"?: string;
-  "courseId"?: string | null;
-  "title"?: string | null;
-  "courseTitle"?: string | null;
-  "startTime"?: string;
-  "durationMinutes"?: number | null;
-  "studentsEnrolled"?: number;
-  "status"?: LiveSessionStatus;
-};
-
 export type LiveSessionStatus = 1 | 2 | 3 | 4;
 
 export type LiveSessionSummaryDto = {
-  "sessionId"?: string;
-  "courseId"?: string | null;
+  "liveSessionId"?: string;
   "title"?: string | null;
   "startTime"?: string;
   "courseTitle"?: string | null;
-  "durationMinutes"?: number | null;
   "studentsEnrolled"?: number;
   "status"?: LiveSessionStatus;
 };
@@ -259,12 +245,11 @@ export type StudentDashboardCourseItemDto = {
 };
 
 export type StudentDashboardLiveSessionItemDto = {
-  "sessionId"?: string;
-  "courseId"?: string | null;
+  "liveSessionId"?: string;
   "title"?: string | null;
   "courseTitle"?: string | null;
   "startTime"?: string;
-  "durationMinutes"?: number | null;
+  "durationMinutes"?: number;
   "status"?: LiveSessionStatus;
 };
 
@@ -313,12 +298,10 @@ export type TeacherDashboardCourseItemDto = {
 };
 
 export type TeacherDashboardLiveSessionItemDto = {
-  "sessionId"?: string;
-  "courseId"?: string | null;
+  "liveSessionId"?: string;
   "title"?: string | null;
   "startTime"?: string;
   "courseTitle"?: string | null;
-  "durationMinutes"?: number | null;
   "studentsEnrolled"?: number;
   "status"?: LiveSessionStatus;
 };
@@ -360,7 +343,6 @@ export type UpdateLiveSessionRequestDto = {
   "description"?: string | null;
   "startTime": string;
   "durationMinutes"?: number;
-  "status"?: LiveSessionStatus;
   "recordingEnabled"?: boolean;
   "playbackEnabled"?: boolean;
   "acsRoomId"?: string | null;

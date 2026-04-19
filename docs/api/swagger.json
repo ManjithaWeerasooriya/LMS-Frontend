@@ -1484,73 +1484,6 @@
         }
       }
     },
-    "/api/v1/teacher/live-classes": {
-      "get": {
-        "tags": [
-          "TeacherLiveClasses"
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/LiveClassListItemDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/LiveClassListItemDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/LiveClassListItemDto"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "TeacherLiveClasses"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ScheduleLiveClassRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ScheduleLiveClassRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/ScheduleLiveClassRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
     "/api/v1/teacher/courses/{courseId}/live-sessions": {
       "post": {
         "tags": [
@@ -2827,9 +2760,6 @@
             "type": "integer",
             "format": "int32"
           },
-          "status": {
-            "$ref": "#/components/schemas/LiveSessionStatus"
-          },
           "recordingEnabled": {
             "type": "boolean"
           },
@@ -3007,36 +2937,6 @@
         },
         "additionalProperties": false
       },
-      "LiveClassListItemDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "topic": {
-            "type": "string",
-            "nullable": true
-          },
-          "courseTitle": {
-            "type": "string",
-            "nullable": true
-          },
-          "scheduledAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "studentsEnrolled": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "meetingLink": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
       "LiveSessionStatus": {
         "enum": [
           1,
@@ -3050,15 +2950,15 @@
       "LiveSessionSummaryDto": {
         "type": "object",
         "properties": {
-          "liveClassId": {
+          "liveSessionId": {
             "type": "string",
             "format": "uuid"
           },
-          "topic": {
+          "title": {
             "type": "string",
             "nullable": true
           },
-          "scheduledAt": {
+          "startTime": {
             "type": "string",
             "format": "date-time"
           },
@@ -3070,9 +2970,8 @@
             "type": "integer",
             "format": "int32"
           },
-          "meetingLink": {
-            "type": "string",
-            "nullable": true
+          "status": {
+            "$ref": "#/components/schemas/LiveSessionStatus"
           }
         },
         "additionalProperties": false
@@ -3316,46 +3215,6 @@
         },
         "additionalProperties": false
       },
-      "ScheduleLiveClassRequestDto": {
-        "required": [
-          "scheduledAt",
-          "topic"
-        ],
-        "type": "object",
-        "properties": {
-          "topic": {
-            "maxLength": 200,
-            "minLength": 1,
-            "type": "string"
-          },
-          "courseId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
-          "scheduledAt": {
-            "type": "string",
-            "description": "Scheduled start time in UTC.",
-            "format": "date-time"
-          },
-          "meetingLink": {
-            "maxLength": 500,
-            "type": "string",
-            "nullable": true
-          },
-          "enableRecording": {
-            "type": "boolean"
-          },
-          "durationMinutes": {
-            "maximum": 600,
-            "minimum": 1,
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
       "StudentCourseListItemDto": {
         "type": "object",
         "properties": {
@@ -3416,14 +3275,14 @@
         },
         "additionalProperties": false
       },
-      "StudentDashboardLiveClassItemDto": {
+      "StudentDashboardLiveSessionItemDto": {
         "type": "object",
         "properties": {
-          "liveClassId": {
+          "liveSessionId": {
             "type": "string",
             "format": "uuid"
           },
-          "topic": {
+          "title": {
             "type": "string",
             "nullable": true
           },
@@ -3431,14 +3290,16 @@
             "type": "string",
             "nullable": true
           },
-          "scheduledAt": {
+          "startTime": {
             "type": "string",
             "format": "date-time"
           },
           "durationMinutes": {
             "type": "integer",
-            "format": "int32",
-            "nullable": true
+            "format": "int32"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LiveSessionStatus"
           }
         },
         "additionalProperties": false
@@ -3478,10 +3339,10 @@
             },
             "nullable": true
           },
-          "upcomingClasses": {
+          "upcomingLiveSessions": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/StudentDashboardLiveClassItemDto"
+              "$ref": "#/components/schemas/StudentDashboardLiveSessionItemDto"
             },
             "nullable": true
           },
@@ -3502,7 +3363,7 @@
             "type": "integer",
             "format": "int32"
           },
-          "upcomingClasses": {
+          "upcomingLiveSessions": {
             "type": "integer",
             "format": "int32"
           },
@@ -3603,15 +3464,15 @@
       "TeacherDashboardLiveSessionItemDto": {
         "type": "object",
         "properties": {
-          "liveClassId": {
+          "liveSessionId": {
             "type": "string",
             "format": "uuid"
           },
-          "topic": {
+          "title": {
             "type": "string",
             "nullable": true
           },
-          "scheduledAt": {
+          "startTime": {
             "type": "string",
             "format": "date-time"
           },
@@ -3623,9 +3484,8 @@
             "type": "integer",
             "format": "int32"
           },
-          "meetingLink": {
-            "type": "string",
-            "nullable": true
+          "status": {
+            "$ref": "#/components/schemas/LiveSessionStatus"
           }
         },
         "additionalProperties": false
@@ -3770,9 +3630,6 @@
             "minimum": 1,
             "type": "integer",
             "format": "int32"
-          },
-          "status": {
-            "$ref": "#/components/schemas/LiveSessionStatus"
           },
           "recordingEnabled": {
             "type": "boolean"
