@@ -8,7 +8,7 @@ const features = [
     description: 'Organize lessons, materials, and course structure in a single learning space.',
   },
   {
-    title: 'Live Classes',
+    title: 'Live Sessions',
     description: 'Deliver real-time teaching sessions and keep learners connected from anywhere.',
   },
   {
@@ -52,8 +52,8 @@ export default async function Home() {
                 Learn, teach, and track progress through one focused platform.
               </h1>
               <p className="mt-5 max-w-xl text-base leading-7 text-slate-500">
-                Give students and instructors a simple place to manage courses, attend live classes,
-                submit assignments, and follow learning progress without friction.
+                Give students and instructors a simple place to manage courses, attend live
+                sessions, submit assignments, and follow learning progress without friction.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link

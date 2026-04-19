@@ -7,10 +7,15 @@ import { useRouter } from 'next/navigation';
 
 import { logoutUser } from '@/lib/auth';
 import {
+  formatDurationLabel,
+  formatLiveClassroomDateTime,
+  getLiveClassroomStatusMeta,
+} from '@/features/live-classroom/utils';
+import {
   getStudentDashboard,
   StudentApiError,
   type StudentDashboardCourse,
-  type StudentDashboardLiveClass,
+  type StudentDashboardLiveSession,
   type StudentDashboardQuiz,
   type StudentDashboardSummary,
 } from '@/features/student/api/student';
@@ -18,7 +23,7 @@ import {
 type DashboardState = {
   summary: StudentDashboardSummary | null;
   myCourses: StudentDashboardCourse[];
-  upcomingClasses: StudentDashboardLiveClass[];
+  upcomingLiveSessions: StudentDashboardLiveSession[];
   pendingQuizzes: StudentDashboardQuiz[];
   loading: boolean;
   error: string | null;
@@ -27,25 +32,50 @@ type DashboardState = {
 const initialState: DashboardState = {
   summary: null,
   myCourses: [],
-  upcomingClasses: [],
+  upcomingLiveSessions: [],
   pendingQuizzes: [],
   loading: true,
   error: null,
 };
 
-const formatDateTime = (value: string) => {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return 'Schedule pending';
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+const normalizeDashboardSummary = (summary: unknown): StudentDashboardSummary | null => {
+  if (!summary || typeof summary !== 'object') {
+    return null;
   }
 
-  return parsed.toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  const record = summary as Record<string, unknown>;
+
+  return {
+    enrolledCourses: isFiniteNumber(record.enrolledCourses) ? record.enrolledCourses : 0,
+    upcomingLiveSessions: isFiniteNumber(record.upcomingLiveSessions)
+      ? record.upcomingLiveSessions
+      : isFiniteNumber(record.upcomingClasses)
+        ? record.upcomingClasses
+        : 0,
+    pendingQuizzes: isFiniteNumber(record.pendingQuizzes) ? record.pendingQuizzes : 0,
+  };
+};
+
+const normalizeDashboardState = (
+  data: Awaited<ReturnType<typeof getStudentDashboard>>,
+): Pick<DashboardState, 'summary' | 'myCourses' | 'upcomingLiveSessions' | 'pendingQuizzes'> => {
+  const legacyData = data as {
+    upcomingClasses?: StudentDashboardLiveSession[];
+  };
+
+  return {
+    summary: normalizeDashboardSummary(data.summary),
+    myCourses: Array.isArray(data.myCourses) ? data.myCourses : [],
+    upcomingLiveSessions: Array.isArray(data.upcomingLiveSessions)
+      ? data.upcomingLiveSessions
+      : Array.isArray(legacyData.upcomingClasses)
+        ? legacyData.upcomingClasses
+        : [],
+    pendingQuizzes: Array.isArray(data.pendingQuizzes) ? data.pendingQuizzes : [],
+  };
 };
 
 export default function StudentDashboardPage() {
@@ -61,10 +91,7 @@ export default function StudentDashboardPage() {
         if (!active) return;
 
         setState({
-          summary: data.summary,
-          myCourses: data.myCourses,
-          upcomingClasses: data.upcomingClasses,
-          pendingQuizzes: data.pendingQuizzes,
+          ...normalizeDashboardState(data),
           loading: false,
           error: null,
         });
@@ -103,8 +130,8 @@ export default function StudentDashboardPage() {
       icon: BookOpen,
     },
     {
-      title: 'Upcoming Classes',
-      value: state.summary?.upcomingClasses ?? '—',
+      title: 'Upcoming Live Sessions',
+      value: state.summary?.upcomingLiveSessions ?? '—',
       accent: 'bg-emerald-100 text-emerald-700',
       icon: MonitorPlay,
     },
@@ -122,7 +149,7 @@ export default function StudentDashboardPage() {
         <p className="text-sm uppercase tracking-[0.4em] text-blue-700">Student Dashboard</p>
         <h1 className="text-3xl font-semibold text-slate-900">Welcome back</h1>
         <p className="text-sm text-slate-500">
-          Follow your courses, upcoming classes, and pending quizzes in one place.
+          Follow your courses, upcoming live sessions, and pending quizzes in one place.
         </p>
       </header>
 
@@ -234,24 +261,51 @@ export default function StudentDashboardPage() {
 
         <div className="space-y-6">
           <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Live Classes</p>
-            <h2 className="mt-1 text-xl font-semibold text-slate-900">Upcoming Classes</h2>
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Live Sessions</p>
+            <h2 className="mt-1 text-xl font-semibold text-slate-900">Upcoming Live Sessions</h2>
             <div className="mt-4 space-y-3">
               {state.loading ? (
-                <p className="text-sm text-slate-500">Loading upcoming classes…</p>
-              ) : state.upcomingClasses.length === 0 ? (
-                <p className="text-sm text-slate-500">No upcoming live classes scheduled.</p>
+                <p className="text-sm text-slate-500">Loading live sessions…</p>
+              ) : state.upcomingLiveSessions.length === 0 ? (
+                <p className="text-sm text-slate-500">No upcoming live sessions scheduled.</p>
               ) : (
-                state.upcomingClasses.map((liveClass) => (
-                  <div key={liveClass.liveClassId || `${liveClass.topic}-${liveClass.scheduledAt}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                    <p className="font-semibold text-slate-900">{liveClass.topic}</p>
-                    <p className="mt-1 text-sm text-slate-500">{liveClass.courseTitle ?? 'General Session'}</p>
-                    <p className="mt-2 text-sm text-slate-700">{formatDateTime(liveClass.scheduledAt)}</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {liveClass.durationMinutes ? `${liveClass.durationMinutes} minutes` : 'Duration to be announced'}
-                    </p>
-                  </div>
-                ))
+                state.upcomingLiveSessions.map((session) => {
+                  const status = getLiveClassroomStatusMeta(session.status);
+                  const content = (
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:border-blue-200 hover:bg-white">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold text-slate-900">{session.title}</p>
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${status.className}`}
+                        >
+                          {status.label}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {session.courseTitle ?? 'General Session'}
+                      </p>
+                      <p className="mt-2 text-sm text-slate-700">
+                        Start Time {formatLiveClassroomDateTime(session.startTime)}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {session.durationMinutes
+                          ? formatDurationLabel(session.durationMinutes)
+                          : 'Duration to be announced'}
+                      </p>
+                    </div>
+                  );
+
+                  return session.courseId ? (
+                    <Link
+                      key={session.id || `${session.title}-${session.startTime}`}
+                      href={`/student/dashboard/courses/${session.courseId}/live-sessions/${session.id}`}
+                    >
+                      {content}
+                    </Link>
+                  ) : (
+                    <div key={session.id || `${session.title}-${session.startTime}`}>{content}</div>
+                  );
+                })
               )}
             </div>
           </article>

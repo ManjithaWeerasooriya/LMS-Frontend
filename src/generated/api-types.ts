@@ -13,6 +13,18 @@ export type AttendanceStatisticsDto = {
   "upcomingSessionDetails"?: Array<LiveSessionSummaryDto> | null;
 };
 
+export type AzureConnectionDiagnosticResultDto = {
+  "success"?: boolean;
+  "message"?: string | null;
+  "checkedAt"?: string;
+};
+
+export type AzureConnectionDiagnosticsResponseDto = {
+  "mySql"?: AzureConnectionDiagnosticResultDto;
+  "azureBlobStorage"?: AzureConnectionDiagnosticResultDto;
+  "azureCommunicationServices"?: AzureConnectionDiagnosticResultDto;
+};
+
 export type ChangePasswordRequest = {
   "currentPassword": string;
   "newPassword": string;
@@ -80,6 +92,22 @@ export type CreateCourseRequestDto = {
   "status"?: string | null;
 };
 
+export type CreateLiveSessionRequestDto = {
+  "title": string;
+  "description"?: string | null;
+  "startTime": string;
+  "durationMinutes"?: number;
+  "recordingEnabled"?: boolean;
+  "playbackEnabled"?: boolean;
+  "meetingType"?: MeetingType;
+  "roomId"?: string | null;
+  "groupId"?: string | null;
+  "meetingLink"?: string | null;
+  "meetingId"?: string | null;
+  "passcode"?: string | null;
+  "chatThreadId"?: string | null;
+};
+
 export type CreateQuestionDto = {
   "text": string;
   "type": QuestionType;
@@ -119,22 +147,17 @@ export type ForgotPasswordRequest = {
   "email": string;
 };
 
-export type LiveClassListItemDto = {
-  "id"?: string;
-  "topic"?: string | null;
-  "courseTitle"?: string | null;
-  "scheduledAt"?: string;
-  "studentsEnrolled"?: number;
-  "meetingLink"?: string | null;
-};
+export type LiveSessionStatus = 1 | 2 | 3 | 4;
+
+export type MeetingType = 1 | 2 | 3;
 
 export type LiveSessionSummaryDto = {
-  "liveClassId"?: string;
-  "topic"?: string | null;
-  "scheduledAt"?: string;
+  "liveSessionId"?: string;
+  "title"?: string | null;
+  "startTime"?: string;
   "courseTitle"?: string | null;
   "studentsEnrolled"?: number;
-  "meetingLink"?: string | null;
+  "status"?: LiveSessionStatus;
 };
 
 export type LoginRequest = {
@@ -209,15 +232,6 @@ export type ResetPasswordRequest = {
   "confirmPassword": string;
 };
 
-export type ScheduleLiveClassRequestDto = {
-  "topic": string;
-  "courseId"?: string | null;
-  "scheduledAt": string;
-  "meetingLink"?: string | null;
-  "enableRecording"?: boolean;
-  "durationMinutes"?: number | null;
-};
-
 export type StudentCourseListItemDto = {
   "id"?: string;
   "title"?: string | null;
@@ -236,12 +250,13 @@ export type StudentDashboardCourseItemDto = {
   "progressPercent"?: number;
 };
 
-export type StudentDashboardLiveClassItemDto = {
-  "liveClassId"?: string;
-  "topic"?: string | null;
+export type StudentDashboardLiveSessionItemDto = {
+  "liveSessionId"?: string;
+  "title"?: string | null;
   "courseTitle"?: string | null;
-  "scheduledAt"?: string;
-  "durationMinutes"?: number | null;
+  "startTime"?: string;
+  "durationMinutes"?: number;
+  "status"?: LiveSessionStatus;
 };
 
 export type StudentDashboardQuizItemDto = {
@@ -254,13 +269,13 @@ export type StudentDashboardQuizItemDto = {
 export type StudentDashboardResponseDto = {
   "summary"?: StudentDashboardSummaryDto;
   "myCourses"?: Array<StudentDashboardCourseItemDto> | null;
-  "upcomingClasses"?: Array<StudentDashboardLiveClassItemDto> | null;
+  "upcomingLiveSessions"?: Array<StudentDashboardLiveSessionItemDto> | null;
   "pendingQuizzes"?: Array<StudentDashboardQuizItemDto> | null;
 };
 
 export type StudentDashboardSummaryDto = {
   "enrolledCourses"?: number;
-  "upcomingClasses"?: number;
+  "upcomingLiveSessions"?: number;
   "pendingQuizzes"?: number;
 };
 
@@ -289,12 +304,12 @@ export type TeacherDashboardCourseItemDto = {
 };
 
 export type TeacherDashboardLiveSessionItemDto = {
-  "liveClassId"?: string;
-  "topic"?: string | null;
-  "scheduledAt"?: string;
+  "liveSessionId"?: string;
+  "title"?: string | null;
+  "startTime"?: string;
   "courseTitle"?: string | null;
   "studentsEnrolled"?: number;
-  "meetingLink"?: string | null;
+  "status"?: LiveSessionStatus;
 };
 
 export type TeacherDashboardPerformanceDto = {
@@ -327,6 +342,22 @@ export type TeacherDashboardSummaryDto = {
   "totalStudents"?: number;
   "pendingSubmissions"?: number;
   "upcomingLiveSessions"?: number;
+};
+
+export type UpdateLiveSessionRequestDto = {
+  "title": string;
+  "description"?: string | null;
+  "startTime": string;
+  "durationMinutes"?: number;
+  "recordingEnabled"?: boolean;
+  "playbackEnabled"?: boolean;
+  "meetingType"?: MeetingType;
+  "roomId"?: string | null;
+  "groupId"?: string | null;
+  "meetingLink"?: string | null;
+  "meetingId"?: string | null;
+  "passcode"?: string | null;
+  "chatThreadId"?: string | null;
 };
 
 export type UpdateMyProfileRequest = {

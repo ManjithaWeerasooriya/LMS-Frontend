@@ -40,7 +40,7 @@ const sidebarLinks: SidebarLink[] = [
   { label: 'Dashboard', href: '/teacher/dashboard', icon: BarChart3 },
   { label: 'My Courses', href: '/teacher/dashboard/courses', icon: BookOpen },
   { label: 'Quizzes', href: '/teacher/dashboard/quizzes', icon: FileText },
-  { label: 'Live Classes', href: '/teacher/dashboard/live-classes', icon: MonitorPlay },
+  { label: 'Live Sessions', href: '/teacher/dashboard/live-sessions', icon: MonitorPlay },
   { label: 'Analytics', href: '/teacher/dashboard/analytics', icon: LineChart },
   { label: 'Materials', href: '/teacher/dashboard/materials', icon: Package2 },
   { label: 'Users', href: '/teacher/dashboard/users', icon: Users },

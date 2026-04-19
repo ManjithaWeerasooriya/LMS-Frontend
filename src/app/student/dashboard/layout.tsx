@@ -5,6 +5,7 @@ import {
   BarChart3,
   BookOpen,
   ClipboardCheck,
+  FolderOpen,
   LogOut,
   Menu,
   PanelLeftClose,
@@ -34,6 +35,7 @@ type SidebarLink = {
 const sidebarLinks: SidebarLink[] = [
   { label: 'Dashboard', href: '/student/dashboard', icon: BarChart3 },
   { label: 'My Courses', href: '/student/dashboard/courses', icon: BookOpen },
+  { label: 'Materials', href: '/student/dashboard/materials', icon: FolderOpen },
   { label: 'Results', href: '/student/dashboard/results', icon: ClipboardCheck },
   { label: 'Settings', href: '/student/dashboard/settings', icon: Settings },
 ];

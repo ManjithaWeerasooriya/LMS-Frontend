@@ -1,10 +1,10 @@
 import { apiClient, isAxiosAuthError } from '@/lib/http';
 import { buildApiPath, resolveApiPath } from '@/generated/api-paths';
-import type { StudentCourseListItemDto, StudentDashboardResponseDto } from '@/generated/api-types';
+import type { LiveSessionStatus, StudentCourseListItemDto } from '@/generated/api-types';
 
 export type StudentDashboardSummary = {
   enrolledCourses: number;
-  upcomingClasses: number;
+  upcomingLiveSessions: number;
   pendingQuizzes: number;
 };
 
@@ -15,12 +15,14 @@ export type StudentDashboardCourse = {
   progressPercent: number;
 };
 
-export type StudentDashboardLiveClass = {
-  liveClassId: string;
-  topic: string;
+export type StudentDashboardLiveSession = {
+  id: string;
+  courseId: string | null;
+  title: string;
   courseTitle: string | null;
-  scheduledAt: string;
+  startTime: string;
   durationMinutes: number | null;
+  status: LiveSessionStatus;
 };
 
 export type StudentDashboardQuiz = {
@@ -57,40 +59,51 @@ export class StudentApiError extends Error {
 export async function getStudentDashboard(): Promise<{
   summary: StudentDashboardSummary;
   myCourses: StudentDashboardCourse[];
-  upcomingClasses: StudentDashboardLiveClass[];
+  upcomingLiveSessions: StudentDashboardLiveSession[];
   pendingQuizzes: StudentDashboardQuiz[];
 }> {
   try {
-    const { data } = await apiClient.get<StudentDashboardResponseDto>(
-      resolveApiPath('/api/v1/student/dashboard'),
-    );
+    const { data } = await apiClient.get<unknown>(resolveApiPath('/api/v1/student/dashboard'));
+    const payload = isRecord(data) ? data : {};
+    const summary = isRecord(payload.summary) ? payload.summary : {};
+    const myCourses = Array.isArray(payload.myCourses) ? payload.myCourses : [];
+    const pendingQuizzes = Array.isArray(payload.pendingQuizzes) ? payload.pendingQuizzes : [];
+    const upcomingLiveSessions = Array.isArray(payload.upcomingLiveSessions)
+      ? payload.upcomingLiveSessions
+      : Array.isArray(payload.upcomingClasses)
+        ? payload.upcomingClasses
+        : [];
 
     return {
       summary: {
-        enrolledCourses: data.summary?.enrolledCourses ?? 0,
-        upcomingClasses: data.summary?.upcomingClasses ?? 0,
-        pendingQuizzes: data.summary?.pendingQuizzes ?? 0,
+        enrolledCourses: readNumber(summary, ['enrolledCourses']) ?? 0,
+        upcomingLiveSessions:
+          readNumber(summary, ['upcomingLiveSessions', 'upcomingClasses']) ?? 0,
+        pendingQuizzes: readNumber(summary, ['pendingQuizzes']) ?? 0,
       },
-      myCourses: (data.myCourses ?? []).map((course) => ({
-        courseId: course.courseId ?? '',
-        title: course.title?.trim() || 'Untitled Course',
-        instructorName: course.instructorName?.trim() || null,
-        progressPercent: typeof course.progressPercent === 'number' ? course.progressPercent : 0,
-      })),
-      upcomingClasses: (data.upcomingClasses ?? []).map((liveClass) => ({
-        liveClassId: liveClass.liveClassId ?? '',
-        topic: liveClass.topic?.trim() || 'Upcoming Class',
-        courseTitle: liveClass.courseTitle?.trim() || null,
-        scheduledAt: liveClass.scheduledAt ?? '',
-        durationMinutes:
-          typeof liveClass.durationMinutes === 'number' ? liveClass.durationMinutes : null,
-      })),
-      pendingQuizzes: (data.pendingQuizzes ?? []).map((quiz) => ({
-        quizId: quiz.quizId ?? '',
-        title: quiz.title?.trim() || 'Untitled Quiz',
-        courseTitle: quiz.courseTitle?.trim() || null,
-        durationMinutes: typeof quiz.durationMinutes === 'number' ? quiz.durationMinutes : 0,
-      })),
+      myCourses: myCourses.map((course) => {
+        const record = isRecord(course) ? course : {};
+
+        return {
+          courseId: readString(record, ['courseId']) ?? '',
+          title: readString(record, ['title']) ?? 'Untitled Course',
+          instructorName: readString(record, ['instructorName']) ?? null,
+          progressPercent: readNumber(record, ['progressPercent']) ?? 0,
+        };
+      }),
+      upcomingLiveSessions: upcomingLiveSessions
+        .map(normalizeStudentDashboardLiveSession)
+        .filter((session) => session.id),
+      pendingQuizzes: pendingQuizzes.map((quiz) => {
+        const record = isRecord(quiz) ? quiz : {};
+
+        return {
+          quizId: readString(record, ['quizId']) ?? '',
+          title: readString(record, ['title']) ?? 'Untitled Quiz',
+          courseTitle: readString(record, ['courseTitle']) ?? null,
+          durationMinutes: readNumber(record, ['durationMinutes']) ?? 0,
+        };
+      }),
     };
   } catch (error) {
     throw convertStudentAxiosError(error, 'Unable to load student dashboard.');
@@ -126,6 +139,41 @@ const readNumber = (record: Record<string, unknown>, keys: string[]): number | n
   }
 
   return null;
+};
+
+const normalizeStatus = (value: unknown): LiveSessionStatus => {
+  if (typeof value === 'number' && value >= 1 && value <= 4) {
+    return value as LiveSessionStatus;
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 4) {
+      return parsed as LiveSessionStatus;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'scheduled') return 1;
+    if (normalized === 'live') return 2;
+    if (normalized === 'ended') return 3;
+    if (normalized === 'cancelled') return 4;
+  }
+
+  return 1;
+};
+
+const normalizeStudentDashboardLiveSession = (value: unknown): StudentDashboardLiveSession => {
+  const record = isRecord(value) ? value : {};
+
+  return {
+    id: readString(record, ['id', 'sessionId', 'liveSessionId', 'liveClassId']) ?? '',
+    courseId: readString(record, ['courseId']) ?? null,
+    title: readString(record, ['title', 'topic', 'name']) ?? 'Upcoming Live Session',
+    courseTitle: readString(record, ['courseTitle']) ?? null,
+    startTime: readString(record, ['startTime', 'scheduledAt', 'startsAt']) ?? '',
+    durationMinutes: readNumber(record, ['durationMinutes']) ?? null,
+    status: normalizeStatus(record.status),
+  };
 };
 
 const buildCourseDescription = (title: string, rawDescription: string | null): string | null => {

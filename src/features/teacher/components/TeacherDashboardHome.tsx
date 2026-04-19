@@ -21,12 +21,17 @@ import {
   getTeacherDashboard,
   type CompletionRate,
   type DashboardCourse,
-  type LiveSession,
   type PendingSubmission,
   type PerformanceSlice,
+  type TeacherDashboardLiveSession,
   type TeacherCourseDetail,
   type TeacherDashboardSummary,
 } from '@/features/teacher/api/teacher';
+import {
+  formatDurationMinutes,
+  formatLiveSessionDateTime,
+  getLiveSessionStatusMeta,
+} from '@/features/teacher/live-sessions/utils';
 
 import {
   CreateCourseModal,
@@ -37,15 +42,15 @@ import {
   type CreateQuizModalProps,
 } from '@/features/teacher/components/CreateQuizModal';
 import {
-  ScheduleLiveClassModal,
-  type ScheduleLiveClassModalProps,
-} from '@/features/teacher/components/ScheduleLiveClassModal';
+  ScheduleLiveSessionModal,
+  type ScheduleLiveSessionModalProps,
+} from '@/features/teacher/components/ScheduleLiveSessionModal';
 
 type DashboardState = {
   summary: TeacherDashboardSummary | null;
   performance: PerformanceSlice[];
   completion: CompletionRate[];
-  sessions: LiveSession[];
+  sessions: TeacherDashboardLiveSession[];
   submissions: PendingSubmission[];
   loading: boolean;
   error?: string | null;
@@ -71,8 +76,8 @@ export function TeacherDashboardHome() {
     useState<CreateCourseModalProps['open']>(false);
   const [openQuizModal, setOpenQuizModal] =
     useState<CreateQuizModalProps['open']>(false);
-  const [openLiveClassModal, setOpenLiveClassModal] =
-    useState<ScheduleLiveClassModalProps['open']>(false);
+  const [openLiveSessionModal, setOpenLiveSessionModal] =
+    useState<ScheduleLiveSessionModalProps['open']>(false);
   const [editCourseModalOpen, setEditCourseModalOpen] = useState(false);
   const [editCourse, setEditCourse] = useState<TeacherCourseDetail | null>(null);
 
@@ -238,10 +243,10 @@ export function TeacherDashboardHome() {
           </button>
           <button
             type="button"
-            onClick={() => setOpenLiveClassModal(true)}
+            onClick={() => setOpenLiveSessionModal(true)}
             className="inline-flex items-center justify-center rounded-2xl border border-[#1B3B8B] px-4 py-2 text-sm font-semibold text-[#1B3B8B] transition hover:bg-blue-50"
           >
-            + Schedule Live Class
+            + Schedule Live Session
           </button>
         </div>
       </section>
@@ -327,11 +332,11 @@ export function TeacherDashboardHome() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Live Sessions</p>
-              <h2 className="text-xl font-semibold text-slate-900">Upcoming Classes</h2>
+              <h2 className="text-xl font-semibold text-slate-900">Upcoming Live Sessions</h2>
             </div>
             <button
               type="button"
-              onClick={() => router.push('/teacher/dashboard/live-classes')}
+              onClick={() => router.push('/teacher/dashboard/live-sessions')}
               className="text-sm font-semibold text-blue-700 transition hover:text-blue-800"
             >
               Manage
@@ -349,37 +354,43 @@ export function TeacherDashboardHome() {
               </div>
             ) : (
               state.sessions.slice(0, 4).map((session) => {
-                const scheduled = new Date(session.scheduledAt);
-                const dateLabel = scheduled.toLocaleDateString(undefined, {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                });
-                const timeLabel = scheduled.toLocaleTimeString(undefined, {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                });
+                const status = getLiveSessionStatusMeta(session.status);
 
                 return (
                   <div
                     key={session.id}
                     className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 px-4 py-3"
                   >
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{session.topic}</p>
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold text-slate-900">{session.title}</p>
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${status.className}`}
+                        >
+                          {status.label}
+                        </span>
+                      </div>
                       <p className="text-xs text-slate-500">
-                        {dateLabel} · {timeLabel} · {session.studentsEnrolled} students
+                        {session.courseTitle ?? 'Live Session'}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Start Time {formatLiveSessionDateTime(session.startTime)}
+                        {session.durationMinutes ? ` · ${formatDurationMinutes(session.durationMinutes)}` : ''}
+                        {` · ${session.studentsEnrolled} students`}
                       </p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (!session.meetingLink) return;
-                        window.open(session.meetingLink, '_blank', 'noopener,noreferrer');
-                      }}
+                      onClick={() =>
+                        router.push(
+                          session.courseId
+                            ? `/teacher/dashboard/courses/${session.courseId}`
+                            : '/teacher/dashboard/live-sessions',
+                        )
+                      }
                       className="rounded-2xl bg-[#1B3B8B] px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#17306f]"
                     >
-                      Join
+                      Manage
                     </button>
                   </div>
                 );
@@ -527,9 +538,9 @@ export function TeacherDashboardHome() {
         open={openQuizModal}
         onClose={() => setOpenQuizModal(false)}
       />
-      <ScheduleLiveClassModal
-        open={openLiveClassModal}
-        onClose={() => setOpenLiveClassModal(false)}
+      <ScheduleLiveSessionModal
+        open={openLiveSessionModal}
+        onClose={() => setOpenLiveSessionModal(false)}
         onScheduled={refreshDashboard}
       />
     </div>

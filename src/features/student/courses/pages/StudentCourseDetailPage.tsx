@@ -15,6 +15,7 @@ import {
   getStudentCourseContent,
   type StudentCourseContent,
 } from '@/features/student/courses/api';
+import { StudentCourseLiveSessionsSection } from '@/features/student/courses/components/StudentCourseLiveSessionsSection';
 import { StudentCourseWeekSection } from '@/features/student/courses/components/StudentCourseWeekSection';
 import {
   downloadMaterial,
@@ -79,7 +80,7 @@ export default function StudentCourseDetailPage({
         content,
       });
     } catch (loadError) {
-      if (loadError instanceof StudentApiError && (loadError.status === 401 || loadError.status === 403)) {
+      if (loadError instanceof StudentApiError && loadError.status === 401) {
         await logoutUser();
         router.replace('/login');
         return;
@@ -90,7 +91,9 @@ export default function StudentCourseDetailPage({
         loading: false,
         error:
           loadError instanceof StudentApiError
-            ? loadError.message
+            ? loadError.status === 403
+              ? 'You are not authorized to access this course content.'
+              : loadError.message
             : 'Unable to load this course right now.',
       }));
     }
@@ -117,6 +120,7 @@ export default function StudentCourseDetailPage({
   const content = state.content;
   const course = content?.course ?? state.enrolledCourse;
   const hasContent = Boolean(content && (content.materials.length > 0 || content.quizzes.length > 0));
+  const shouldShowLiveSessions = state.loading || Boolean(course);
 
   return (
     <div className="space-y-6">
@@ -176,6 +180,8 @@ export default function StudentCourseDetailPage({
           </button>
         </div>
       ) : null}
+
+      {shouldShowLiveSessions ? <StudentCourseLiveSessionsSection courseId={courseId} /> : null}
 
       {state.loading ? (
         <div className="space-y-4">
