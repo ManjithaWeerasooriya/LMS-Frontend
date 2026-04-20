@@ -1,4 +1,9 @@
 import { apiClient, isAxiosAuthError } from '@/lib/http';
+import {
+  resolveDownloadFilename,
+  toDownloadBlob,
+  triggerBlobDownload,
+} from '@/lib/files';
 
 export type MaterialType = 'pdf' | 'video' | 'assignment' | 'other';
 
@@ -169,15 +174,29 @@ export const convertMaterialsAxiosError = (error: unknown): never => {
   throw new MaterialsApiError('Unable to complete materials request.', 0);
 };
 
-const extractFilename = (headerValue?: string): string | null => {
-  if (!headerValue) return null;
-  const matches = /filename\*=UTF-8''([^;]+)|filename="?([^;"]+)"?/i.exec(headerValue);
-  if (matches?.[1]) {
-    return decodeURIComponent(matches[1]);
+const readHeader = (headers: unknown, key: string): string | null => {
+  if (!headers || typeof headers !== 'object') {
+    return null;
   }
-  if (matches?.[2]) {
-    return matches[2];
+
+  const normalizedKey = key.toLowerCase();
+
+  if ('get' in headers && typeof headers.get === 'function') {
+    const value = headers.get(normalizedKey);
+    return typeof value === 'string' && value.trim() ? value : null;
   }
+
+  const record = headers as Record<string, unknown>;
+  const value = record[normalizedKey] ?? record[key];
+
+  if (typeof value === 'string' && value.trim()) {
+    return value;
+  }
+
+  if (Array.isArray(value) && value.length > 0) {
+    return value.join(', ');
+  }
+
   return null;
 };
 
@@ -191,17 +210,16 @@ export async function downloadMaterialFromPath(path: string, fallbackFilename: s
       responseType: 'blob',
     });
 
-    const blob = new Blob([response.data]);
-    const downloadUrl = window.URL.createObjectURL(blob);
-    const filename = extractFilename(response.headers?.['content-disposition']) ?? fallbackFilename;
+    const contentDisposition = readHeader(response.headers, 'content-disposition');
+    const contentType = readHeader(response.headers, 'content-type');
+    const blob = toDownloadBlob(response.data, contentType);
+    const filename = resolveDownloadFilename({
+      contentDisposition,
+      contentType: blob.type || contentType,
+      fallbackFilename,
+    });
 
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(downloadUrl);
+    triggerBlobDownload(blob, filename);
   } catch (error) {
     convertMaterialsAxiosError(error);
   }

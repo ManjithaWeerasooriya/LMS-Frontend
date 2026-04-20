@@ -135,7 +135,7 @@ export default function TeacherMaterialsPage() {
 
   const handleDownload = async (material: CourseMaterial) => {
     try {
-      await downloadMaterial(material.id);
+      await downloadMaterial(material);
     } catch (err) {
       if (err instanceof MaterialsApiError) {
         setError(err.message);
@@ -184,7 +184,7 @@ export default function TeacherMaterialsPage() {
           <div className="mt-2 h-4 w-2/3 animate-pulse rounded-full bg-slate-200" />
         </div>
       ) : (
-        <MaterialList materials={materials} role="teacher" onDownload={handleDownload} />
+        <MaterialList materials={materials} onDownload={handleDownload} />
       )}
 
       {hasData ? (

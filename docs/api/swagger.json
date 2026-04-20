@@ -2835,34 +2835,6 @@
           "playbackEnabled": {
             "type": "boolean"
           },
-          "meetingType": {
-            "$ref": "#/components/schemas/MeetingType"
-          },
-          "roomId": {
-            "maxLength": 200,
-            "type": "string",
-            "nullable": true
-          },
-          "groupId": {
-            "maxLength": 100,
-            "type": "string",
-            "nullable": true
-          },
-          "meetingLink": {
-            "maxLength": 1000,
-            "type": "string",
-            "nullable": true
-          },
-          "meetingId": {
-            "maxLength": 200,
-            "type": "string",
-            "nullable": true
-          },
-          "passcode": {
-            "maxLength": 200,
-            "type": "string",
-            "nullable": true
-          },
           "chatThreadId": {
             "maxLength": 200,
             "type": "string",
@@ -3111,15 +3083,6 @@
           }
         },
         "additionalProperties": false
-      },
-      "MeetingType": {
-        "enum": [
-          1,
-          2,
-          3
-        ],
-        "type": "integer",
-        "format": "int32"
       },
       "PerformanceBandDto": {
         "type": "object",
@@ -3732,34 +3695,6 @@
           },
           "playbackEnabled": {
             "type": "boolean"
-          },
-          "meetingType": {
-            "$ref": "#/components/schemas/MeetingType"
-          },
-          "roomId": {
-            "maxLength": 200,
-            "type": "string",
-            "nullable": true
-          },
-          "groupId": {
-            "maxLength": 100,
-            "type": "string",
-            "nullable": true
-          },
-          "meetingLink": {
-            "maxLength": 1000,
-            "type": "string",
-            "nullable": true
-          },
-          "meetingId": {
-            "maxLength": 200,
-            "type": "string",
-            "nullable": true
-          },
-          "passcode": {
-            "maxLength": 200,
-            "type": "string",
-            "nullable": true
           },
           "chatThreadId": {
             "maxLength": 200,

@@ -16,12 +16,11 @@ describe('LMS-88 Download/View controls', () => {
     materialType: 'assignment',
   };
 
-  it('invokes the download handler and exposes view link when fileUrl exists', async () => {
+  it('invokes the download handler and only renders the download action', async () => {
     const onDownload = vi.fn();
-    render(<MaterialList materials={[material]} role="student" onDownload={onDownload} />);
+    render(<MaterialList materials={[material]} onDownload={onDownload} />);
 
-    const viewLink = screen.getByRole('link', { name: /view/i });
-    expect(viewLink).toHaveAttribute('href', material.fileUrl as string);
+    expect(screen.queryByRole('link', { name: /view|open/i })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /download/i }));
     expect(onDownload).toHaveBeenCalledWith(material);
