@@ -105,7 +105,7 @@ export default function StudentCourseDetailPage({
 
   const handleDownloadMaterial = async (material: CourseMaterial) => {
     try {
-      await downloadMaterial(material.id);
+      await downloadMaterial(material);
     } catch (downloadError) {
       setState((current) => ({
         ...current,

@@ -28,7 +28,6 @@ const iconByType: Record<MaterialType, ReactElement> = {
 
 type MaterialListProps = {
   materials: CourseMaterial[];
-  role: 'teacher' | 'student';
   onDownload?: (material: CourseMaterial) => Promise<void> | void;
 };
 
@@ -57,7 +56,7 @@ const formatSize = (bytes: number) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-export function MaterialList({ materials, role, onDownload }: MaterialListProps) {
+export function MaterialList({ materials, onDownload }: MaterialListProps) {
   const rows = useMemo(() => materials, [materials]);
 
   if (!rows.length) {
@@ -86,8 +85,6 @@ export function MaterialList({ materials, role, onDownload }: MaterialListProps)
               const badgeClass = badgeStyles[material.materialType];
               const typeLabel = materialTypeLabel[material.materialType];
               const Icon = iconByType[material.materialType];
-              const canView = Boolean(material.fileUrl);
-              const viewLabel = role === 'student' ? 'View' : 'Open';
 
               return (
                 <tr key={material.id} className="hover:bg-slate-50/80">
@@ -110,17 +107,7 @@ export function MaterialList({ materials, role, onDownload }: MaterialListProps)
                   <td className="px-6 py-4 text-slate-700">{formatSize(material.fileSizeBytes)}</td>
                   <td className="px-6 py-4 text-slate-700">{formatDate(material.uploadedAt)}</td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      {canView ? (
-                        <a
-                          href={material.fileUrl ?? undefined}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center rounded-2xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-800"
-                        >
-                          {viewLabel}
-                        </a>
-                      ) : null}
+                    <div className="flex items-center justify-end">
                       <button
                         type="button"
                         onClick={() => onDownload?.(material)}

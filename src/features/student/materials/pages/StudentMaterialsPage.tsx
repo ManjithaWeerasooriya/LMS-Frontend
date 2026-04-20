@@ -126,7 +126,7 @@ export default function StudentMaterialsPage() {
 
   const handleDownload = async (material: CourseMaterial) => {
     try {
-      await downloadMaterial(material.id);
+      await downloadMaterial(material);
     } catch (err) {
       if (err instanceof MaterialsApiError) {
         if (err.status === 401) {
@@ -251,11 +251,7 @@ export default function StudentMaterialsPage() {
                 </Link>
               </div>
 
-              <MaterialList
-                materials={section.materials}
-                role="student"
-                onDownload={handleDownload}
-              />
+              <MaterialList materials={section.materials} onDownload={handleDownload} />
             </section>
           ))}
         </div>
