@@ -132,7 +132,12 @@ export const toDownloadBlob = (data: DownloadableData, contentType?: string | nu
     return data.slice(0, data.size, normalizedContentType);
   }
 
-  return new Blob([data], normalizedContentType ? { type: normalizedContentType } : undefined);
+  if (typeof data === 'string' || data instanceof ArrayBuffer) {
+    return new Blob([data], normalizedContentType ? { type: normalizedContentType } : undefined);
+  }
+
+  const arrayBuffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+  return new Blob([arrayBuffer], normalizedContentType ? { type: normalizedContentType } : undefined);
 };
 
 export const triggerBlobDownload = (blob: Blob, filename: string): void => {
