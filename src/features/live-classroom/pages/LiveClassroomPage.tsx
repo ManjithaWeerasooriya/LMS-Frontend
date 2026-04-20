@@ -786,6 +786,7 @@ export default function LiveClassroomPage({
                   <VideoTileSurface
                     tile={stageTile}
                     title={role === 'teacher' ? 'Live stage' : 'Teacher stream'}
+                    showFullscreenButton={role === 'student'}
                     emptyTitle={
                       role === 'teacher'
                         ? isLive

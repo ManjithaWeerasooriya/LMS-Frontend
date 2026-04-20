@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LiveClassroomPage from '@/features/live-classroom/pages/LiveClassroomPage';
 import { LIVE_CLASSROOM_RECORDING_STATUS, LIVE_CLASSROOM_STATUS } from '@/features/live-classroom/utils';
 import type { TeacherLiveSession } from '@/features/teacher/live-sessions/api';
+import type { StudentLiveSession } from '@/features/student/live-sessions/api';
 
 const mockState = vi.hoisted(() => ({
   createLiveSessionJoinToken: vi.fn(),
@@ -79,11 +80,15 @@ vi.mock('@/features/live-classroom/components/VideoTileSurface', () => ({
     tile,
     title,
     emptyTitle,
+    showFullscreenButton,
   }: {
     tile: { displayName: string } | null;
     title: string;
     emptyTitle: string;
-  }) => <div>{tile ? `${title}: ${tile.displayName}` : emptyTitle}</div>,
+    showFullscreenButton?: boolean;
+  }) => (
+    <div>{tile ? `${title}${showFullscreenButton ? ' [fullscreen]' : ''}: ${tile.displayName}` : emptyTitle}</div>
+  ),
 }));
 
 vi.mock('@/features/live-classroom/components/LiveChatPanel', () => ({
@@ -196,11 +201,35 @@ const createTeacherSession = (
   ...overrides,
 });
 
+const createStudentSession = (
+  overrides: Partial<StudentLiveSession> = {},
+): StudentLiveSession => ({
+  id: 'session-1',
+  courseId: 'course-1',
+  courseTitle: 'Advanced English',
+  title: 'Broadcast Session',
+  description: 'Session description',
+  startTime: '2026-04-20T10:00:00Z',
+  durationMinutes: 60,
+  status: LIVE_CLASSROOM_STATUS.live,
+  recordingEnabled: true,
+  playbackEnabled: false,
+  recordingStatus: LIVE_CLASSROOM_RECORDING_STATUS.notStarted,
+  recordingUrl: null,
+  recordingStartedAt: null,
+  recordingStoppedAt: null,
+  teacherName: 'Teacher One',
+  acsRoomId: 'room-1',
+  chatThreadId: 'thread-1',
+  ...overrides,
+});
+
 describe('LiveClassroomPage teacher live state', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
     mockState.call.isConnected = false;
+    mockState.call.remoteTiles = [];
     mockState.call.localPreview = {
       id: 'local-preview',
       participantId: 'local-preview',
@@ -282,5 +311,23 @@ describe('LiveClassroomPage teacher live state', () => {
 
     expect(await screen.findByText(/unable to start the live session/i)).toBeInTheDocument();
     expect(screen.getByText('Local preview: Local preview')).toBeInTheDocument();
+  });
+
+  it('shows the fullscreen control on the student teacher stream tile', async () => {
+    mockState.call.remoteTiles = [
+      {
+        id: 'teacher-stream',
+        participantId: 'teacher-1',
+        displayName: 'Teacher stream',
+        target: document.createElement('div'),
+        mediaStreamType: 'Video',
+        isReceiving: true,
+      },
+    ];
+    mockState.getStudentLiveSessionById.mockResolvedValue(createStudentSession());
+
+    render(<LiveClassroomPage role="student" courseId="course-1" sessionId="session-1" />);
+
+    expect(await screen.findByText('Teacher stream [fullscreen]: Teacher stream')).toBeInTheDocument();
   });
 });
