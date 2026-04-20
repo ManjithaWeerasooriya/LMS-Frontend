@@ -2,18 +2,27 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QuizDetailsForm } from '@/features/teacher/quizzes/components/QuizDetailsForm';
 import { QuizQuestionComposer } from '@/features/teacher/quizzes/components/QuizQuestionComposer';
+import TeacherQuizEditorPage from '@/features/teacher/quizzes/pages/TeacherQuizEditorPage';
 import { defaultQuizEditorValues } from '@/features/teacher/quizzes/schemas';
 import type { QuestionEditorValues, QuizEditorValues, TeacherQuizSummary } from '@/features/teacher/quizzes/types';
 import TeacherCourseQuizzesPage from '@/features/teacher/quizzes/pages/TeacherCourseQuizzesPage';
 import { confirmMock } from '../../mocks/confirmContext';
+import { pushMock } from '../../mocks/nextNavigation';
 import { vi } from 'vitest';
 import React from 'react';
 
 const mockGetTeacherCourseById = vi.fn();
+const mockCreateTeacherQuiz = vi.fn();
+const mockCreateTeacherQuizQuestion = vi.fn();
+const mockDeleteTeacherQuizQuestion = vi.fn();
+const mockGetTeacherQuizById = vi.fn();
+const mockGetTeacherQuizQuestions = vi.fn();
 const mockGetTeacherQuizzesByCourse = vi.fn();
 const mockDeleteTeacherQuiz = vi.fn();
 const mockPublishTeacherQuizResults = vi.fn();
 const mockUnpublishTeacherQuizResults = vi.fn();
+const mockUpdateTeacherQuiz = vi.fn();
+const mockUpdateTeacherQuizQuestion = vi.fn();
 const mockGetTeacherQuizErrorMessage = vi.fn((_error, fallback) => fallback);
 
 vi.mock('@/features/teacher/api/teacher', () => ({
@@ -21,10 +30,23 @@ vi.mock('@/features/teacher/api/teacher', () => ({
 }));
 
 vi.mock('@/features/teacher/quizzes/api', () => ({
+  createTeacherQuiz: (...args: unknown[]) => mockCreateTeacherQuiz(...(args as Parameters<typeof mockCreateTeacherQuiz>)),
+  createTeacherQuizQuestion: (...args: unknown[]) =>
+    mockCreateTeacherQuizQuestion(...(args as Parameters<typeof mockCreateTeacherQuizQuestion>)),
+  deleteTeacherQuizQuestion: (...args: unknown[]) =>
+    mockDeleteTeacherQuizQuestion(...(args as Parameters<typeof mockDeleteTeacherQuizQuestion>)),
+  getTeacherQuizById: (...args: unknown[]) =>
+    mockGetTeacherQuizById(...(args as Parameters<typeof mockGetTeacherQuizById>)),
+  getTeacherQuizQuestions: (...args: unknown[]) =>
+    mockGetTeacherQuizQuestions(...(args as Parameters<typeof mockGetTeacherQuizQuestions>)),
   getTeacherQuizzesByCourse: (...args: unknown[]) => mockGetTeacherQuizzesByCourse(...(args as Parameters<typeof mockGetTeacherQuizzesByCourse>)),
   deleteTeacherQuiz: (...args: unknown[]) => mockDeleteTeacherQuiz(...(args as Parameters<typeof mockDeleteTeacherQuiz>)),
   publishTeacherQuizResults: (...args: unknown[]) => mockPublishTeacherQuizResults(...(args as Parameters<typeof mockPublishTeacherQuizResults>)),
   unpublishTeacherQuizResults: (...args: unknown[]) => mockUnpublishTeacherQuizResults(...(args as Parameters<typeof mockUnpublishTeacherQuizResults>)),
+  updateTeacherQuiz: (...args: unknown[]) =>
+    mockUpdateTeacherQuiz(...(args as Parameters<typeof mockUpdateTeacherQuiz>)),
+  updateTeacherQuizQuestion: (...args: unknown[]) =>
+    mockUpdateTeacherQuizQuestion(...(args as Parameters<typeof mockUpdateTeacherQuizQuestion>)),
   getTeacherQuizErrorMessage: (...args: unknown[]) => mockGetTeacherQuizErrorMessage(...(args as Parameters<typeof mockGetTeacherQuizErrorMessage>)),
 }));
 
@@ -51,10 +73,17 @@ function QuizCreationHarness({ onSubmit }: { onSubmit: (values: QuizEditorValues
 describe('Teacher quiz flows', () => {
   beforeEach(() => {
     mockGetTeacherCourseById.mockReset();
+    mockCreateTeacherQuiz.mockReset();
+    mockCreateTeacherQuizQuestion.mockReset();
+    mockDeleteTeacherQuizQuestion.mockReset();
+    mockGetTeacherQuizById.mockReset();
+    mockGetTeacherQuizQuestions.mockReset();
     mockGetTeacherQuizzesByCourse.mockReset();
     mockDeleteTeacherQuiz.mockReset();
     mockPublishTeacherQuizResults.mockReset();
     mockUnpublishTeacherQuizResults.mockReset();
+    mockUpdateTeacherQuiz.mockReset();
+    mockUpdateTeacherQuizQuestion.mockReset();
     confirmMock.mockImplementation(() => Promise.resolve(true));
   });
 
@@ -95,6 +124,47 @@ describe('Teacher quiz flows', () => {
     expect(values.title).toBe('Weekly mastery quiz');
     expect(questions).toHaveLength(1);
     expect(questions[0].options.some((option) => option.isCorrect)).toBe(true);
+  });
+
+  it('serializes quiz availability timestamps as UTC when creating quizzes', async () => {
+    mockGetTeacherCourseById.mockResolvedValue({ title: 'Physics 201' });
+    mockCreateTeacherQuiz.mockResolvedValue('quiz-created');
+
+    render(<TeacherQuizEditorPage mode="create" courseId="course-99" />);
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /create quiz for physics 201/i })).toBeInTheDocument(),
+    );
+
+    await userEvent.type(screen.getByLabelText(/title/i), 'Timezone check');
+    await userEvent.clear(screen.getByLabelText(/duration \(minutes\)/i));
+    await userEvent.type(screen.getByLabelText(/duration \(minutes\)/i), '30');
+    await userEvent.clear(screen.getByLabelText(/total marks/i));
+    await userEvent.type(screen.getByLabelText(/total marks/i), '50');
+    await userEvent.type(screen.getByLabelText(/start time/i), '2026-04-20T19:15');
+    await userEvent.type(screen.getByLabelText(/end time/i), '2026-04-20T20:15');
+    await userEvent.click(screen.getByLabelText(/publish quiz/i));
+
+    await userEvent.click(screen.getByRole('button', { name: /create quiz/i }));
+
+    await waitFor(() => expect(mockCreateTeacherQuiz).toHaveBeenCalledTimes(1));
+
+    expect(mockCreateTeacherQuiz).toHaveBeenCalledWith({
+      courseId: 'course-99',
+      title: 'Timezone check',
+      description: null,
+      durationMinutes: 30,
+      totalMarks: 50,
+      startTimeUtc: new Date(2026, 3, 20, 19, 15).toISOString(),
+      endTimeUtc: new Date(2026, 3, 20, 20, 15).toISOString(),
+      randomizeQuestions: false,
+      allowMultipleAttempts: false,
+      isPublished: true,
+      areResultsPublished: false,
+    });
+    expect(pushMock).toHaveBeenCalledWith(
+      '/teacher/dashboard/courses/course-99/quizzes/quiz-created/edit',
+    );
   });
 
   it('loads, deletes, and publishes quizzes inside TeacherCourseQuizzesPage', async () => {

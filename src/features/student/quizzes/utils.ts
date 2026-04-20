@@ -1,5 +1,7 @@
 'use client';
 
+import { normalizeUtcDateTimeString } from '@/lib/datetime';
+
 type AvailabilityFormatOptions = {
   fallbackLabel?: string;
 };
@@ -30,7 +32,12 @@ const isSameYear = (left: Date, right: Date) => left.getFullYear() === right.get
 const parseDate = (value: string | null) => {
   if (!value) return null;
 
-  const parsed = new Date(value);
+  const normalized = normalizeUtcDateTimeString(value);
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = new Date(normalized);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 

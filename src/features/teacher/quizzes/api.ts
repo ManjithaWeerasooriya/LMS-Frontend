@@ -1,6 +1,7 @@
 import { isAxiosError } from 'axios';
 
 import { apiClient } from '@/lib/http';
+import { normalizeUtcDateTimeString } from '@/lib/datetime';
 import type {
   CreateQuestionDto,
   CreateQuizDto,
@@ -160,22 +161,6 @@ const normalizeQuizAnalytics = (value: unknown): TeacherQuizAnalytics => {
   };
 };
 
-const mockTeacherQuizAnalytics: TeacherQuizAnalytics = {
-  quizId: '11111111-1111-1111-1111-111111111111',
-  quizTitle: 'Unit 3 – Grammar Quiz',
-  courseId: '22222222-2222-2222-2222-222222222222',
-  courseTitle: 'Intermediate English B1',
-  totalMarks: 100,
-  averageScore: 74.25,
-  highestScore: 98,
-  lowestScore: 32,
-  passPercentage: 68.75,
-  failPercentage: 31.25,
-  participationRate: 82.5,
-  totalEnrolledStudents: 40,
-  studentsParticipated: 33,
-};
-
 const normalizeQuestionType = (value: unknown): QuestionType => {
   if (typeof value === 'number' && value >= 1 && value <= 6) {
     return value as QuestionType;
@@ -259,9 +244,13 @@ const normalizeQuiz = (value: unknown): TeacherQuizDetail => {
       readBoolean(record, ['areResultsPublished', 'resultsPublished']) ?? false,
     randomizeQuestions: readBoolean(record, ['randomizeQuestions']) ?? false,
     allowMultipleAttempts: readBoolean(record, ['allowMultipleAttempts']) ?? false,
-    startTimeUtc: readString(record, ['startTimeUtc', 'startsAt', 'availableFrom']),
-    endTimeUtc: readString(record, ['endTimeUtc', 'endsAt', 'availableUntil']),
-    createdAt: readString(record, ['createdAt', 'createdOn']),
+    startTimeUtc: normalizeUtcDateTimeString(
+      readString(record, ['startTimeUtc', 'startsAt', 'availableFrom']),
+    ),
+    endTimeUtc: normalizeUtcDateTimeString(
+      readString(record, ['endTimeUtc', 'endsAt', 'availableUntil']),
+    ),
+    createdAt: normalizeUtcDateTimeString(readString(record, ['createdAt', 'createdOn'])),
   };
 };
 
@@ -369,8 +358,10 @@ const normalizeAttemptSummary = (value: unknown): TeacherQuizAttemptSummary => {
       '',
     studentName,
     status: readString(record, ['status']) ?? 'Unknown',
-    startedAt: readString(record, ['startedAt', 'startedOn']),
-    submittedAt: readString(record, ['submittedAt', 'completedAt', 'submittedOn']),
+    startedAt: normalizeUtcDateTimeString(readString(record, ['startedAt', 'startedOn'])),
+    submittedAt: normalizeUtcDateTimeString(
+      readString(record, ['submittedAt', 'completedAt', 'submittedOn']),
+    ),
     score,
     totalMarks,
     percentage,
