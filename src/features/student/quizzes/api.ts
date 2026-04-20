@@ -3,6 +3,7 @@
 import { isAxiosError } from 'axios';
 
 import { apiClient } from '@/lib/http';
+import { normalizeUtcDateTimeString } from '@/lib/datetime';
 import { buildApiPath, resolveApiPath } from '@/generated/api-paths';
 import type { QuestionType, SubmitQuizAttemptDto } from '@/generated/api-types';
 import { QUIZ_QUESTION_TYPES } from '@/features/teacher/quizzes/types';
@@ -395,24 +396,28 @@ const extractSubmittedAt = (
   record: Record<string, unknown>,
   attemptRecord: Record<string, unknown> | null,
 ) =>
-  (attemptRecord
-    ? readString(attemptRecord, ['submittedAt', 'completedAt', 'submittedOn', 'completedOn'])
-    : null) ??
-  readString(record, [
-    'submittedAt',
-    'completedAt',
-    'latestSubmittedAt',
-    'lastSubmittedAt',
-    'submittedOn',
-    'completedOn',
-  ]);
+  normalizeUtcDateTimeString(
+    (attemptRecord
+      ? readString(attemptRecord, ['submittedAt', 'completedAt', 'submittedOn', 'completedOn'])
+      : null) ??
+      readString(record, [
+        'submittedAt',
+        'completedAt',
+        'latestSubmittedAt',
+        'lastSubmittedAt',
+        'submittedOn',
+        'completedOn',
+      ]),
+  );
 
 const extractStartedAt = (
   record: Record<string, unknown>,
   attemptRecord: Record<string, unknown> | null,
 ) =>
-  (attemptRecord ? readString(attemptRecord, ['startedAt', 'startedOn']) : null) ??
-  readString(record, ['startedAt', 'startedOn']);
+  normalizeUtcDateTimeString(
+    (attemptRecord ? readString(attemptRecord, ['startedAt', 'startedOn']) : null) ??
+      readString(record, ['startedAt', 'startedOn']),
+  );
 
 const extractResultsPublished = (
   record: Record<string, unknown>,
@@ -613,8 +618,12 @@ const normalizeQuizSummary = (
       readNumber(record, ['questionCount', 'questionsCount', 'totalQuestions']) ??
       questions.length,
     status: inferredStatus,
-    availableFrom: readString(record, ['startTimeUtc', 'startsAt', 'availableFrom']),
-    availableUntil: readString(record, ['endTimeUtc', 'endsAt', 'availableUntil']),
+    availableFrom: normalizeUtcDateTimeString(
+      readString(record, ['startTimeUtc', 'startsAt', 'availableFrom']),
+    ),
+    availableUntil: normalizeUtcDateTimeString(
+      readString(record, ['endTimeUtc', 'endsAt', 'availableUntil']),
+    ),
     availabilityLabel: readString(record, ['availabilityLabel', 'availability', 'availabilityText']),
     isPublished: readBoolean(record, ['isPublished', 'published']),
     areResultsPublished: extractResultsPublished(record, attemptRecord),
@@ -818,10 +827,11 @@ const normalizeStudentQuizResult = (
     (answersPendingGrading != null ? answersPendingGrading > 0 : null);
   const attemptStatus = extractAttemptStatus(record, attemptRecord);
   const startedAt =
-    extractStartedAt(record, attemptRecord) ?? readString(record, ['attemptedAt', 'startedAt']);
+    extractStartedAt(record, attemptRecord) ??
+    normalizeUtcDateTimeString(readString(record, ['attemptedAt', 'startedAt']));
   const submittedAt =
     extractSubmittedAt(record, attemptRecord) ??
-    readString(record, ['submittedAt', 'completedAt', 'attemptedAt']);
+    normalizeUtcDateTimeString(readString(record, ['submittedAt', 'completedAt', 'attemptedAt']));
   const normalizedAttemptStatus = attemptStatus ? getStudentQuizDisplayStatus(attemptStatus) : null;
 
   return {
@@ -958,9 +968,13 @@ const normalizeAttemptDetail = (
       (questions.length > 0 ? questions.length : quizSummary.questionCount),
     status: getStudentQuizDisplayStatus(inferQuizStatus(record, null)),
     availableFrom:
-      readString(record, ['availableFrom', 'startTimeUtc', 'startsAt']) ?? quizSummary.availableFrom,
+      normalizeUtcDateTimeString(
+        readString(record, ['availableFrom', 'startTimeUtc', 'startsAt']),
+      ) ?? quizSummary.availableFrom,
     availableUntil:
-      readString(record, ['availableUntil', 'endTimeUtc', 'endsAt']) ?? quizSummary.availableUntil,
+      normalizeUtcDateTimeString(
+        readString(record, ['availableUntil', 'endTimeUtc', 'endsAt']),
+      ) ?? quizSummary.availableUntil,
     availabilityLabel:
       readString(record, ['availabilityLabel', 'availability', 'availabilityText']) ??
       quizSummary.availabilityLabel,
@@ -979,8 +993,10 @@ const normalizeAttemptDetail = (
     percentage,
     answersPendingGrading,
     requiresManualGrading,
-    startedAt: readString(record, ['startedAt', 'startedOn']),
-    submittedAt: readString(record, ['submittedAt', 'completedAt', 'submittedOn']),
+    startedAt: normalizeUtcDateTimeString(readString(record, ['startedAt', 'startedOn'])),
+    submittedAt: normalizeUtcDateTimeString(
+      readString(record, ['submittedAt', 'completedAt', 'submittedOn']),
+    ),
     timeRemainingSeconds:
       readNumber(record, ['timeRemainingSeconds', 'remainingSeconds']) ??
       quizSummary.timeRemainingSeconds,

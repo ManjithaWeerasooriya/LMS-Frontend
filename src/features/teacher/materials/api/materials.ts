@@ -48,10 +48,12 @@ export async function getCourseMaterials(courseId: string): Promise<CourseMateri
   }
 }
 
-export async function downloadMaterial(id: number): Promise<void> {
+export async function downloadMaterial(
+  material: Pick<CourseMaterial, 'id' | 'fileName'>,
+): Promise<void> {
   await downloadMaterialFromPath(
-    buildApiPath(MATERIAL_DOWNLOAD_PATH, { id }),
-    `material-${id}`,
+    buildApiPath(MATERIAL_DOWNLOAD_PATH, { id: material.id }),
+    material.fileName?.trim() || `material-${material.id}`,
   );
 }
 

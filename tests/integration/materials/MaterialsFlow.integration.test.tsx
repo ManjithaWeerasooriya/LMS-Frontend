@@ -21,7 +21,7 @@ function MaterialsFlowHarness() {
     <div>
       <UploadDropzone courseId="course-77" onUpload={handleUpload} />
       <div className="mt-6">
-        <MaterialList materials={materials} role="teacher" onDownload={mockDownload} />
+        <MaterialList materials={materials} onDownload={mockDownload} />
       </div>
     </div>
   );

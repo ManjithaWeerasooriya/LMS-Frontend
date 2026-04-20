@@ -384,6 +384,10 @@ export default function LiveClassroomPage({
   const attendanceHref = `/teacher/dashboard/courses/${courseId}/live-sessions/${sessionId}/attendance`;
   const sessionStatus = session ? getLiveClassroomStatusMeta(session.status) : null;
   const recordingStatus = session ? getRecordingStatusMeta(session.recordingStatus) : null;
+  const isLive = session?.status === LIVE_CLASSROOM_STATUS.live;
+  const isStartingLive = role === 'teacher' && isStartingSession && !isLive;
+  const shouldShowTeacherPreview = role === 'teacher' && !isLive;
+  const shouldShowTeacherLiveState = role === 'teacher' && isLive;
   const connectionLabel = getConnectionLabel({
     isTokenLoading,
     isJoining: call.isJoining,
@@ -402,7 +406,10 @@ export default function LiveClassroomPage({
     !session || isTokenLoading || !call.supportsJoining || isStartingSession;
 
   const primaryRemoteTile = call.remoteTiles[0] ?? null;
-  const additionalRemoteTiles = call.remoteTiles.slice(1);
+  const teacherStageTile = role === 'teacher' && isLive ? call.localPreview ?? primaryRemoteTile : null;
+  const stageTile = teacherStageTile ?? primaryRemoteTile;
+  const additionalRemoteTiles =
+    role === 'teacher' && isLive && call.localPreview ? call.remoteTiles : call.remoteTiles.slice(1);
 
   const classroomSummary = useMemo(() => {
     if (!session) {
@@ -450,10 +457,10 @@ export default function LiveClassroomPage({
           className="inline-flex items-center justify-center rounded-2xl bg-[#1B3B8B] px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-[#17306f] disabled:cursor-not-allowed disabled:bg-slate-300"
         >
           {isStartingSession
-            ? session?.status === LIVE_CLASSROOM_STATUS.live
+            ? isLive
               ? 'Joining…'
               : 'Starting…'
-            : session?.status === LIVE_CLASSROOM_STATUS.live
+            : isLive
               ? call.isConnected
                 ? 'Live now'
                 : 'Join live room'
@@ -694,17 +701,19 @@ export default function LiveClassroomPage({
 
                       {role === 'teacher' ? (
                         <div className="mt-5 flex flex-wrap gap-3">
-                          <button
-                            type="button"
-                            onClick={() => void handlePreparePreview()}
-                            disabled={isPreparingPreview || isTokenLoading || !call.supportsJoining}
-                            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            <RefreshCcw
-                              className={`h-4 w-4 ${isPreparingPreview ? 'animate-spin' : ''}`}
-                            />
-                            {call.localPreview ? 'Refresh preview' : 'Prepare preview'}
-                          </button>
+                          {!isLive ? (
+                            <button
+                              type="button"
+                              onClick={() => void handlePreparePreview()}
+                              disabled={isPreparingPreview || isTokenLoading || !call.supportsJoining}
+                              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              <RefreshCcw
+                                className={`h-4 w-4 ${isPreparingPreview ? 'animate-spin' : ''}`}
+                              />
+                              {call.localPreview ? 'Refresh preview' : 'Prepare preview'}
+                            </button>
+                          ) : null}
 
                           <button
                             type="button"
@@ -765,24 +774,33 @@ export default function LiveClassroomPage({
                 title="Classroom Stage"
                 description={
                   role === 'teacher'
-                    ? 'Local preview stays on the right while connected participants appear on the main stage.'
+                    ? isLive
+                      ? 'The classroom is live. The stage stays focused on the broadcast state while you manage the session controls.'
+                      : isStartingLive
+                        ? 'The broadcast is starting. The preview stays visible until the session status confirms the classroom is live.'
+                        : 'Prepare your camera framing here before you go live.'
                     : 'Join the classroom to watch the teacher stream and follow the live delivery.'
                 }
               >
                 <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]">
                   <VideoTileSurface
-                    tile={primaryRemoteTile}
+                    tile={stageTile}
                     title={role === 'teacher' ? 'Live stage' : 'Teacher stream'}
+                    showFullscreenButton={role === 'student'}
                     emptyTitle={
                       role === 'teacher'
-                        ? 'Waiting for participants'
+                        ? isLive
+                          ? 'Broadcast feed unavailable'
+                          : 'Waiting for participants'
                         : session.status === LIVE_CLASSROOM_STATUS.live
                           ? 'Waiting for the teacher video'
                           : 'Session not live yet'
                     }
                     emptyMessage={
                       role === 'teacher'
-                        ? 'Student video will appear here when participants join with their cameras enabled.'
+                        ? isLive
+                          ? 'Your live camera feed is not available yet. Confirm the camera is on and the classroom connection is active.'
+                          : 'Student video will appear here when participants join with their cameras enabled.'
                         : session.status === LIVE_CLASSROOM_STATUS.live
                           ? 'The classroom is live, but the teacher video stream is not available yet.'
                           : 'The teacher has not gone live yet. Keep this page open and watch the status update.'
@@ -790,13 +808,24 @@ export default function LiveClassroomPage({
                   />
 
                   <div className="space-y-4">
-                    {role === 'teacher' ? (
+                    {shouldShowTeacherPreview ? (
                       <VideoTileSurface
                         tile={call.localPreview}
                         title="Local preview"
                         emptyTitle="Preview unavailable"
                         emptyMessage="Prepare the preview to confirm your camera framing before going live."
                       />
+                    ) : shouldShowTeacherLiveState ? (
+                      <div className="rounded-[28px] border border-emerald-200 bg-emerald-50 p-5">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
+                          <Radio className="h-4 w-4 text-emerald-700" />
+                          Broadcast is live
+                        </div>
+                        <p className="mt-3 text-sm leading-6 text-emerald-800">
+                          The classroom is now in its live broadcast state. The local preview is hidden
+                          while the teacher stays connected to the live room.
+                        </p>
+                      </div>
                     ) : (
                       <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
                         <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">

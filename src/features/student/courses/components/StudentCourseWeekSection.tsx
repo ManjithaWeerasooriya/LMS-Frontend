@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CalendarClock, ClipboardList, Clock3, Download, ExternalLink, FileText, FolderOpen } from 'lucide-react';
+import { CalendarClock, ClipboardList, Clock3, Download, FileText, FolderOpen } from 'lucide-react';
 
 import type { CourseMaterial } from '@/features/student/materials/api/materials';
 import type { StudentCourseQuiz, StudentCourseWeek } from '@/features/student/courses/api';
@@ -150,17 +150,6 @@ export function StudentCourseWeekSection({
                   ) : null}
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {material.fileUrl ? (
-                      <a
-                        href={material.fileUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        View
-                      </a>
-                    ) : null}
                     <button
                       type="button"
                       onClick={() => onDownloadMaterial(material)}
